@@ -11,7 +11,7 @@ runs:
     using: "composite"
     steps:
         -   name: Setup Bazelisk
-            uses: azelbuild/setup-bazelisk@v3
+            uses: bazelbuild/setup-bazelisk@v3
         -   name: Install JDK 17
             uses: actions/setup-java@v4
             with:
