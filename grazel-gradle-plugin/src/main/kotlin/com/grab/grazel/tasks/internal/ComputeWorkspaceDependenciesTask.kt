@@ -66,7 +66,7 @@ abstract class ComputeWorkspaceDependenciesTask : DefaultTask() {
             val computeTask = rootProject.tasks
                 .register<ComputeWorkspaceDependenciesTask>(TASK_NAME) {
                     workspaceDependencies.set(
-                        rootProject.layout.buildDirectory.file("grazel/mergedDependencies.json")
+                        rootProject.layout.buildDirectory.file("grazel/dependencies.json")
                     )
                 }
             ResolveVariantDependenciesTask.register(

@@ -12,6 +12,7 @@ import com.grab.grazel.gradle.dependencies.model.versionInfo
 import com.grab.grazel.gradle.variant.DEFAULT_VARIANT
 import com.grab.grazel.util.fromJson
 import org.gradle.api.file.RegularFile
+import java.util.TreeMap
 
 internal class ComputeWorkspaceDependencies {
 
@@ -58,6 +59,20 @@ internal class ComputeWorkspaceDependencies {
                 .mapValues { (_, dependencies) -> maxVersionByShortId(dependencies) }
         }.toMutableMap()
 
+        // Compute the transitive classpath map with shortId as key and list of dependency shortIds as values
+        val transitiveClasspath: Map<String, List<String>> = reducedClasspath
+            .flatMap { it.value.values }
+            .filter(ResolvedDependency::direct)
+            .groupBy(ResolvedDependency::shortId)
+            .mapValuesTo(TreeMap()) { (_, deps) ->
+                deps.flatMap {
+                    it.dependencies
+                        .map(ResolvedDependency::from)
+                        .map(ResolvedDependency::shortId)
+                        .toSortedSet()
+                }
+            }
+
         // While the above map contains accurate version information in each classpath, there is
         // still possibility of duplicate versions among all classpath, in order to fix this
         // we iterate non default classpath once again but check if any of them appear already
@@ -98,7 +113,10 @@ internal class ComputeWorkspaceDependencies {
         flattenClasspath.clear()
         reducedClasspath.clear()
         reducedFinalClasspath.clear()
-        return WorkspaceDependencies(result = sortedFinalClasspath)
+        return WorkspaceDependencies(
+            result = sortedFinalClasspath,
+            transitiveClasspath = transitiveClasspath
+        )
     }
 
     /**

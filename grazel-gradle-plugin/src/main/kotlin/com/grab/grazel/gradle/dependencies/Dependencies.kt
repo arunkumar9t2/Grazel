@@ -242,7 +242,7 @@ internal class DefaultDependenciesDataSource @Inject constructor(
                 }
                 when (dependency.group) {
                     DAGGER_GROUP -> StringDependency("//:dagger")
-                    else -> dependencyResolutionService.get().get(
+                    else -> dependencyResolutionService.get().getMavenDependency(
                         variants = variantHierarchy,
                         group = dependency.group!!,
                         name = dependency.name!!
