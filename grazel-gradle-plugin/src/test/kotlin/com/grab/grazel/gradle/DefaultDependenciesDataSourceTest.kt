@@ -100,7 +100,7 @@ class DefaultDependenciesDataSourceTest {
             dependencyResolutionService = grazelComponent
                 .dependencyResolutionService()
                 .get().apply {
-                    populateCache(
+                    populateMavenStore(
                         workspaceDependencies = WorkspaceDependencies(
                             result = buildMap {
                                 put(

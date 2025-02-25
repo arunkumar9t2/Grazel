@@ -23,6 +23,9 @@ import com.grab.grazel.gradle.dependencies.model.WorkspaceDependencies
 import com.grab.grazel.tasks.internal.ComputeWorkspaceDependenciesTask
 import com.grab.grazel.tasks.internal.GenerateBazelScriptsTask
 import com.grab.grazel.util.fromJson
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.gradle.api.Project
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
@@ -52,6 +55,14 @@ internal interface DependencyResolutionService : BuildService<DependencyResoluti
         name: String
     ): MavenDependency?
 
+    /**
+     * Get transitive dependencies for a given dependency identified by its shortId
+     *
+     * @param shortId The short identifier for the dependency
+     * @return Set of transitive dependencies
+     */
+    fun getTransitiveDependencies(shortId: String): Set<String>
+
     fun init(workspaceDependenciesJson: File): WorkspaceDependencies
 
     companion object {
@@ -63,7 +74,11 @@ internal interface DependencyResolutionService : BuildService<DependencyResoluti
 
 internal abstract class DefaultDependencyResolutionService : DependencyResolutionService {
     private var mavenInstallStore: MavenInstallStore? = null
+    private var transitiveDependenciesStore: TransitiveDependenciesStore? = null
     private var workspaceDependencies: WorkspaceDependencies? = null
+    private val initMutex = Mutex()
+    private val mavenStoreLock = Mutex()
+    private val transitiveDepsStoreLock = Mutex()
 
     override fun getMavenDependency(
         variants: Set<String>,
@@ -71,21 +86,55 @@ internal abstract class DefaultDependencyResolutionService : DependencyResolutio
         name: String
     ): MavenDependency? = mavenInstallStore?.get(variants, group, name)
 
+    override fun getTransitiveDependencies(shortId: String): Set<String> =
+        transitiveDependenciesStore?.get(shortId) ?: emptySet()
+
     override fun init(workspaceDependenciesJson: File): WorkspaceDependencies {
         if (workspaceDependencies == null) {
-            workspaceDependencies = fromJson<WorkspaceDependencies>(workspaceDependenciesJson)
+            runBlocking {
+                initMutex.withLock {
+                    if (workspaceDependencies == null) {
+                        workspaceDependencies = fromJson<WorkspaceDependencies>(
+                            workspaceDependenciesJson
+                        )
+                        populateMavenStore(workspaceDependencies!!)
+                        populateTransitiveDependenciesStore(workspaceDependencies!!)
+                    }
+                }
+            }
         }
-        populateCache(workspaceDependencies!!)
         return workspaceDependencies!!
     }
 
-    internal fun populateCache(workspaceDependencies: WorkspaceDependencies) {
+    internal fun populateMavenStore(workspaceDependencies: WorkspaceDependencies) {
         if (mavenInstallStore == null) {
-            mavenInstallStore = DefaultMavenInstallStore().apply {
-                workspaceDependencies.result.forEach { (variantName, dependencies) ->
-                    dependencies.forEach { dependency ->
-                        val (group, name, _) = dependency.id.split(":")
-                        set(variantName, group, name)
+            runBlocking {
+                mavenStoreLock.withLock {
+                    if (mavenInstallStore == null) {
+                        mavenInstallStore = DefaultMavenInstallStore().apply {
+                            workspaceDependencies.result.forEach { (variantName, dependencies) ->
+                                dependencies.forEach { dependency ->
+                                    val (group, name, _) = dependency.id.split(":")
+                                    set(variantName, group, name)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    internal fun populateTransitiveDependenciesStore(workspaceDependencies: WorkspaceDependencies) {
+        if (transitiveDependenciesStore == null) {
+            runBlocking {
+                transitiveDepsStoreLock.withLock {
+                    if (transitiveDependenciesStore == null) {
+                        transitiveDependenciesStore = DefaultTransitiveDependenciesStore().apply {
+                            workspaceDependencies.transitiveClasspath.forEach { (shortId, dependencies) ->
+                                set(shortId, dependencies.toSet())
+                            }
+                        }
                     }
                 }
             }
@@ -95,6 +144,8 @@ internal abstract class DefaultDependencyResolutionService : DependencyResolutio
     override fun close() {
         mavenInstallStore?.close()
         mavenInstallStore = null
+        transitiveDependenciesStore?.close()
+        transitiveDependenciesStore = null
     }
 
     companion object {
