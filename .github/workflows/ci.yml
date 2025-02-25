@@ -14,26 +14,6 @@ env:
     TERM: dumb
 
 jobs:
-    android-setup-verification:
-        runs-on: ubuntu-latest
-        steps:
-            -   name: Checkout
-                uses: actions/checkout@v4
-            -   name: Setup Android SDK
-                uses: ./.github/actions/android
-            -   name: Print Android environment
-                shell: bash
-                run: |
-                    echo "ANDROID_HOME: $ANDROID_HOME"
-                    echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
-                    echo "PATH: $PATH"
-            -   name: Verify Android tools
-                shell: bash
-                run: |
-                    adb --version
-                    $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list_installed
-                    $ANDROID_NDK_HOME/ndk-build --version
-
     lint:
         runs-on: ubuntu-latest
         steps:
