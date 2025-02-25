@@ -12,6 +12,7 @@ import com.grab.grazel.gradle.dependencies.model.versionInfo
 import com.grab.grazel.gradle.variant.DEFAULT_VARIANT
 import com.grab.grazel.util.fromJson
 import org.gradle.api.file.RegularFile
+import java.util.concurrent.ConcurrentMap
 import java.util.stream.Collector
 import java.util.stream.Collectors
 
@@ -23,7 +24,7 @@ internal class ComputeWorkspaceDependencies {
         // Maximum compatible version is picked using [maxVersionReducer] since jsons produced by
         // [ResolveVariantDependenciesTask] is module specific and we can have two version of the
         // same dependency.
-        val classPaths = compileDependenciesJsons
+        val classPaths: Map<String, Map<String, ResolvedDependency>> = compileDependenciesJsons
             .parallelStream()
             .map<ResolveDependenciesResult>(::fromJson)
             .collect(
