@@ -143,8 +143,9 @@ internal class ComputeWorkspaceDependencies {
     }
 
     /**
-     * A reducing collector that picks the [ResolvedDependency] with higher [ResolvedDependency.version]
-     * by simple comparison and merges metadata like exclude rules and override targets.
+     * A reducing collector that picks the [ResolvedDependency] with higher
+     * [ResolvedDependency.version] by simple comparison and merges metadata like exclude rules and
+     * override targets.
      */
     private fun maxVersionReducer(): Collector<ResolvedDependency, *, ResolvedDependency> {
         return Collectors.reducing(null) { old, new ->
