@@ -1,0 +1,12 @@
+name: 'Setup Android SDK'
+description: 'Installs Android SDK and necessary components for CI builds'
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        sdk-path: ${{ github.workspace }}/android-sdk
+        accept-android-sdk-licenses: 'true'
+        log-accepted-android-sdk-licenses: 'false'
+        packages: 'platforms;android-34 build-tools;33.0.1 ndk;30.0.0 tools platform-tools'
