@@ -10,6 +10,10 @@ inputs:
 runs:
     using: "composite"
     steps:
+        -   name: Set Bazel version
+            shell: bash
+            run: echo "USE_BAZEL_VERSION=$(cat .bazelversion)" >> $GITHUB_ENV
+
         -   name: Setup Bazelisk
             uses: bazelbuild/setup-bazelisk@v3
         -   name: Install JDK 17
