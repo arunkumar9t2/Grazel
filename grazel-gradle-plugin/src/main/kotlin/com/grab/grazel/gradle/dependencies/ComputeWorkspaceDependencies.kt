@@ -21,6 +21,7 @@ internal class ComputeWorkspaceDependencies {
         // [ResolveVariantDependenciesTask] is module specific and we can have two version of the
         // same dependency.
         val classPaths = compileDependenciesJsons
+            .asSequence()
             .map<RegularFile, ResolveDependenciesResult>(::fromJson)
             .groupBy(
                 keySelector = ResolveDependenciesResult::variantName,
@@ -55,7 +56,7 @@ internal class ComputeWorkspaceDependencies {
                 .flatMap(ResolvedDependency::allDependencies)
                 .groupBy(ResolvedDependency::shortId)
                 .mapValues { (_, dependencies) -> maxVersionByShortId(dependencies) }
-        }
+        }.toMutableMap()
 
         // While the above map contains accurate version information in each classpath, there is
         // still possibility of duplicate versions among all classpath, in order to fix this
@@ -84,8 +85,7 @@ internal class ComputeWorkspaceDependencies {
                         )
                     } else dependency
                 }
-            }
-            .toMutableMap()
+            }.toMutableMap()
 
         // Add default classpath to the final result
         reducedFinalClasspath[DEFAULT_VARIANT] = defaultFlatClasspath.values.toList()
@@ -94,6 +94,10 @@ internal class ComputeWorkspaceDependencies {
         val sortedFinalClasspath = reducedFinalClasspath.mapValues {
             it.value.sortedBy(ResolvedDependency::id)
         }
+        classPaths.clear()
+        flattenClasspath.clear()
+        reducedClasspath.clear()
+        reducedFinalClasspath.clear()
         return WorkspaceDependencies(result = sortedFinalClasspath)
     }
 
