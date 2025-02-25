@@ -10,3 +10,8 @@ runs:
         accept-android-sdk-licenses: 'true'
         log-accepted-android-sdk-licenses: 'false'
         packages: 'platforms;android-34 build-tools;33.0.1 ndk;23.0.7599858 tools platform-tools'
+    - name: Add NDK to PATH
+      shell: bash
+      run: |
+        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/23.0.7599858" >> $GITHUB_ENV
+        echo "$ANDROID_HOME/ndk/23.0.7599858" >> $GITHUB_PATH
