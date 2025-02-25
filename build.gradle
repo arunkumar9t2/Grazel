@@ -139,7 +139,7 @@ grazel {
             }
             // Enable to add tags in generated tags that can be used to do classpath reduction
             // for build performance.
-            enabledTransitiveReduction = false
+            enabledTransitiveReduction = true
         }
         dagger {
             tag = "2.47"
