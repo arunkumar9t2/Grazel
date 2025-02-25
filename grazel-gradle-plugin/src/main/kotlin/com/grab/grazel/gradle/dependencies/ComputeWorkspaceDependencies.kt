@@ -12,85 +12,50 @@ import com.grab.grazel.gradle.dependencies.model.versionInfo
 import com.grab.grazel.gradle.variant.DEFAULT_VARIANT
 import com.grab.grazel.util.fromJson
 import org.gradle.api.file.RegularFile
-import java.util.concurrent.ConcurrentMap
-import java.util.stream.Collector
-import java.util.stream.Collectors
-
 
 internal class ComputeWorkspaceDependencies {
 
     fun compute(compileDependenciesJsons: List<RegularFile>): WorkspaceDependencies {
-        // Parse all jsons parallely and compute the classPaths among all variants.
-        // Maximum compatible version is picked using [maxVersionReducer] since jsons produced by
+        // Parse all jsons and compute the classPaths among all variants.
+        // Maximum compatible version is picked using [maxVersionByShortId] since jsons produced by
         // [ResolveVariantDependenciesTask] is module specific and we can have two version of the
         // same dependency.
-        val classPaths: Map<String, Map<String, ResolvedDependency>> = compileDependenciesJsons
-            .parallelStream()
-            .map<ResolveDependenciesResult>(::fromJson)
-            .collect(
-                Collectors.groupingByConcurrent(
-                    ResolveDependenciesResult::variantName,
-                    Collectors.flatMapping(
-                        { resolvedDependency ->
-                            resolvedDependency
-                                .dependencies
-                                .getValue(COMPILE.name)
-                                .parallelStream()
-                        },
-                        Collectors.groupingByConcurrent(
-                            ResolvedDependency::shortId,
-                            maxVersionReducer()
-                        )
-                    )
-                )
-            )
+        val classPaths = compileDependenciesJsons
+            .map<RegularFile, ResolveDependenciesResult>(::fromJson)
+            .groupBy(
+                keySelector = ResolveDependenciesResult::variantName,
+                valueTransform = { resolvedDependency ->
+                    resolvedDependency.dependencies.getValue(COMPILE.name)
+                }
+            ).mapValues { (_, dependencyLists) ->
+                dependencyLists
+                    .flatten()
+                    .groupBy(ResolvedDependency::shortId)
+                    .mapValues { (_, dependencies) -> maxVersionByShortId(dependencies) }
+            }.toMutableMap()
 
         // Even though [ResolveVariantDependenciesTask] does classpath reduction per module, the
         // final classpath here will not be accurate. For example, a dependency may appear twice in
         // both `release` and `default`. In order to correct this, we remove duplicates in non default
         // classPaths by comparing entries against occurrence in default classPath.
         val defaultClasspath = classPaths.getValue(DEFAULT_VARIANT)
+
         // Reduce non default classpath entries to contain only artifacts unique to them
         val reducedClasspath = classPaths
-            .entries
-            .parallelStream()
-            .filter { it.key != DEFAULT_VARIANT }
+            .filter { it.key != DEFAULT_VARIANT } // Skip default classpath
             .filter { it.value.isNotEmpty() }
-            .collect(
-                Collectors.toConcurrentMap({ it.key }, { (_, dependencies) ->
-                    dependencies.entries
-                        .parallelStream()
-                        .filter { it.key !in defaultClasspath }
-                        .collect(Collectors.toMap({ it.key }, { it.value }))
-                })
-            ).apply { put(DEFAULT_VARIANT, defaultClasspath) }
+            .mapValues { (_, dependencies) -> dependencies.filterKeys { it !in defaultClasspath } }
+            .toMutableMap()
+            .apply { put(DEFAULT_VARIANT, defaultClasspath) } // Add default classpath back
 
         // After reduction, flatten the dependency graph such that all transitive dependencies
-        // appear as direct. Run the [maxVersionReducer] one more time to pick max version correctly
-        val flattenClasspath = reducedClasspath
-            .entries
-            .parallelStream()
-            .collect(
-                Collectors.toConcurrentMap(
-                    { it.key },
-                    { (_, dependencyMap) ->
-                        dependencyMap
-                            .entries
-                            .parallelStream()
-                            .collect(
-                                Collectors.flatMapping(
-                                    // Flatten the transitive dependencies
-                                    { it.value.allDependencies.stream() },
-                                    Collectors.groupingByConcurrent(
-                                        // Group by short id to ignore version in keys
-                                        ResolvedDependency::shortId,
-                                        // Once grouped, reduce it and only pick the highest version
-                                        maxVersionReducer()
-                                    )
-                                )
-                            )
-                    })
-            )
+        // appear as direct. Run the [maxVersionByShortId] one more time to pick max version correctly
+        val flattenClasspath = reducedClasspath.mapValues { (_, dependencyMap) ->
+            dependencyMap.values
+                .flatMap(ResolvedDependency::allDependencies)
+                .groupBy(ResolvedDependency::shortId)
+                .mapValues { (_, dependencies) -> maxVersionByShortId(dependencies) }
+        }
 
         // While the above map contains accurate version information in each classpath, there is
         // still possibility of duplicate versions among all classpath, in order to fix this
@@ -99,63 +64,55 @@ internal class ComputeWorkspaceDependencies {
         // If they do establish a [OverrideTarget] to default classpath
         val defaultFlatClasspath = flattenClasspath.getValue(DEFAULT_VARIANT)
 
-        val reducedFinalClasspath: Map<String, List<ResolvedDependency>> = flattenClasspath
-            .entries
-            .parallelStream()
+        val reducedFinalClasspath: MutableMap<String, List<ResolvedDependency>> = flattenClasspath
             .filter { it.key != DEFAULT_VARIANT }
             .filter { it.value.isNotEmpty() }
-            .collect(
-                Collectors.toConcurrentMap(
-                    { (shortId, _) -> shortId },
-                    { (_, dependencies) ->
-                        dependencies.entries
-                            .parallelStream()
-                            .collect(
-                                Collectors.toMap(
-                                    { (shortId, _) -> shortId },
-                                    { (shortId, dependency) ->
-                                        // If a transitive dependency is already in default classpath,
-                                        // then we override it to point to default classpath instead
-                                        if (shortId in defaultFlatClasspath && !dependency.direct) {
-                                            val (group, name, _, _) = dependency!!.id.split(":")
-                                            dependency.copy(
-                                                overrideTarget = OverrideTarget(
-                                                    artifactShortId = shortId,
-                                                    label = BazelDependency.MavenDependency(
-                                                        group = group,
-                                                        name = name
-                                                    )
-                                                )
-                                            )
-                                        } else dependency
-                                    })
+            .mapValues { (_, dependencies) ->
+                dependencies.entries.map { (shortId, dependency) ->
+                    // If a transitive dependency is already in default classpath,
+                    // then we override it to point to default classpath instead
+                    if (shortId in defaultFlatClasspath && !dependency.direct) {
+                        val (group, name, _, _) = dependency.id.split(":")
+                        dependency.copy(
+                            overrideTarget = OverrideTarget(
+                                artifactShortId = shortId,
+                                label = BazelDependency.MavenDependency(
+                                    group = group,
+                                    name = name
+                                )
                             )
-                    })
-            ).apply { put(DEFAULT_VARIANT, defaultFlatClasspath) }
-            .mapValues { it.value.values.sortedBy(ResolvedDependency::id) }
+                        )
+                    } else dependency
+                }
+            }
+            .toMutableMap()
 
-        // Clear maps to allow GC
-        defaultFlatClasspath.clear()
-        flattenClasspath.clear()
-        reducedClasspath.clear()
-        defaultClasspath.clear()
-        classPaths.clear()
-        return WorkspaceDependencies(result = reducedFinalClasspath)
+        // Add default classpath to the final result
+        reducedFinalClasspath[DEFAULT_VARIANT] = defaultFlatClasspath.values.toList()
+
+        // Sort dependencies by ID
+        val sortedFinalClasspath = reducedFinalClasspath.mapValues {
+            it.value.sortedBy(ResolvedDependency::id)
+        }
+        return WorkspaceDependencies(result = sortedFinalClasspath)
     }
 
     /**
-     * A reducing collector that picks the [ResolvedDependency] with higher
-     * [ResolvedDependency.version] by simple comparison and merges metadata like exclude rules and
-     * override targets.
+     * Selects the [ResolvedDependency] with the highest version from a list of dependencies with
+     * the same shortId. Also merges metadata like exclude rules and override targets.
+     *
+     * @param dependencies List of dependencies with the same shortId
+     * @return The dependency with the highest version, with merged metadata
      */
-    private fun maxVersionReducer(): Collector<ResolvedDependency, *, ResolvedDependency> {
-        return Collectors.reducing(null) { old, new ->
-            when {
-                old == null -> new
-                new == null -> old
-                // Pick the max version
-                else -> if (old.versionInfo > new.versionInfo) old.merge(new) else new.merge(old)
-            }
+    private fun maxVersionByShortId(dependencies: List<ResolvedDependency>): ResolvedDependency {
+        if (dependencies.isEmpty()) {
+            throw IllegalArgumentException("Cannot find max version in an empty list of dependencies")
+        }
+        return dependencies.reduce { acc, dependency ->
+            // Pick the max version and merge metadata
+            if (acc.versionInfo > dependency.versionInfo) {
+                acc.merge(dependency)
+            } else dependency.merge(acc)
         }
     }
 }
