@@ -18,6 +18,9 @@ runs:
                 distribution: "zulu"
                 java-version: "17"
 
+        -   name: Setup Android SDK
+            uses: ./.github/actions/android
+
         -   name: Mount bazel cache
             uses: actions/cache@v4
             with:
