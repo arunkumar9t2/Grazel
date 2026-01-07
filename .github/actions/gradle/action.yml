@@ -29,7 +29,6 @@ runs:
       uses: gradle/actions/setup-gradle@v5
       with:
         cache-read-only: ${{ inputs.read-only }}
-        build-root-directory: ${{ inputs.build-root-directory }}
 
     - name: Run Gradle
       shell: bash
