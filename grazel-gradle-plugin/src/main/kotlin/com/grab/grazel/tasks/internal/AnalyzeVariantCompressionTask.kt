@@ -212,12 +212,12 @@ constructor(
      * transitive dependencies, allowing them to compress even when library deps are expanded.
      */
     private fun analyzeTestVariants(project: Project) {
-        logger.lifecycle("[TEST COMPRESSION] Starting test analysis for ${project.path}")
+        logger.info("[TEST COMPRESSION] Starting test analysis for ${project.path}")
         val testVariants = variantMatcher.get().matchedVariants(project, VariantType.Test)
-        logger.lifecycle("[TEST COMPRESSION] Found ${testVariants.size} test variants for ${project.path}: ${testVariants.map { it.variantName }}")
+        logger.info("[TEST COMPRESSION] Found ${testVariants.size} test variants for ${project.path}: ${testVariants.map { it.variantName }}")
 
         if (testVariants.isEmpty()) {
-            logger.lifecycle("[TEST COMPRESSION] No test variants found for ${project.path}, skipping")
+            logger.info("[TEST COMPRESSION] No test variants found for ${project.path}, skipping")
             return
         }
 
@@ -226,7 +226,7 @@ constructor(
             matchedVariant.variantName to
                 androidUnitTestDataExtractor.get().extract(project, matchedVariant)
         }
-        logger.lifecycle("[TEST COMPRESSION] Extracted test data for ${testVariantData.size} variants")
+        logger.info("[TEST COMPRESSION] Extracted test data for ${testVariantData.size} variants")
 
         // Build type function for tests
         fun testBuildTypeFn(variantName: String): String {
@@ -235,6 +235,7 @@ constructor(
 
         // Compress tests independently (no dependency blocking)
         val testCompressionResult = unitTestVariantCompressor.get().compress(
+            projectName = project.name,
             variants = testVariantData,
             buildTypeFn = ::testBuildTypeFn
         )
@@ -247,7 +248,7 @@ constructor(
         }
 
         // Log results
-        logger.lifecycle(
+        logger.info(
             "[TEST COMPRESSION] ${project.path} $compressionType: ${testCompressionResult.suffixes.size} test targets " +
                 "from ${testVariantData.size} test variants. Suffixes: ${testCompressionResult.suffixes}"
         )
@@ -257,7 +258,7 @@ constructor(
             project.path,
             testCompressionResult
         )
-        logger.lifecycle("[TEST COMPRESSION] Registered test result for ${project.path}")
+        logger.info("[TEST COMPRESSION] Registered test result for ${project.path}")
     }
 
     companion object {

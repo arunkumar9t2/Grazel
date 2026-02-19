@@ -77,12 +77,12 @@ constructor(
         // Resolve library suffix from library compression result
         // This gets the suffix that the library target uses (could be empty if fully compressed)
         val libraryResult = variantCompressionService.get().get(project.path)
-        project.logger.lifecycle("[TEST DATA] ${project.path} library compression result: suffixes=${libraryResult?.suffixes}, isFullyCompressed=${libraryResult?.isFullyCompressed}")
+        project.logger.info("[TEST DATA] ${project.path} library compression result: suffixes=${libraryResult?.suffixes}, isFullyCompressed=${libraryResult?.isFullyCompressed}")
 
         val targetSuffix = if (libraryResult != null) {
             // Try to find the suffix for this specific library variant
             val variantSuffix = libraryResult.suffixForVariantOrNull(libraryVariantName)
-            project.logger.lifecycle("[TEST DATA] ${project.path} variant '$libraryVariantName' maps to suffix: '$variantSuffix'")
+            project.logger.info("[TEST DATA] ${project.path} variant '$libraryVariantName' maps to suffix: '$variantSuffix'")
 
             variantSuffix
                 ?: libraryResult.suffixes.firstOrNull()  // Fallback to first suffix if variant not found (e.g., fully compressed)
@@ -92,7 +92,7 @@ constructor(
             matchedVariant.nameSuffix
         }
 
-        project.logger.lifecycle("[TEST DATA] ${project.path} test ${matchedVariant.variantName}: library variant=$libraryVariantName, resolved suffix='$targetSuffix'")
+        project.logger.info("[TEST DATA] ${project.path} test ${matchedVariant.variantName}: library variant=$libraryVariantName, resolved suffix='$targetSuffix'")
 
         val name = FORMAT_UNIT_TEST_NAME.format(
             project.name,

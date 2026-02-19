@@ -1,4 +1,4 @@
-load("@grab_bazel_common//rules:defs.bzl", "android_library")
+load("@grab_bazel_common//rules:defs.bzl", "android_library", "android_unit_test")
 
 android_library(
     name = "sample-android-flavor-demo-free-debug",
@@ -345,5 +345,31 @@ android_library(
         "@maven//:androidx_compose_ui_ui",
         "@maven//:androidx_constraintlayout_constraintlayout",
         "@maven//:androidx_constraintlayout_constraintlayout_core",
+    ],
+)
+
+android_unit_test(
+    name = "sample-android-flavor-test",
+    size = "medium",
+    srcs = glob([
+        "src/test/java/com/grab/grazel/android/flavor/FlavorTest.kt",
+    ]),
+    associates = [
+        "//flavors/sample-android-flavor:sample-android-flavor-demo-free-debug_kt",
+    ],
+    custom_package = "com.grab.grazel.android.flavor",
+    enable_compose = True,
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        "//:parcelize",
+        "//flavors/sample-android-flavor:sample-android-flavor-demo-free-debug",
+        "@debug_maven//:androidx_core_core",
+        "@maven//:androidx_appcompat_appcompat",
+        "@maven//:androidx_compose_ui_ui",
+        "@maven//:androidx_constraintlayout_constraintlayout",
+        "@maven//:androidx_constraintlayout_constraintlayout_core",
+        "@maven//:junit_junit",
     ],
 )

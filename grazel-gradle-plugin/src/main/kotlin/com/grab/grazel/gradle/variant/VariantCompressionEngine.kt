@@ -48,6 +48,8 @@ internal class VariantCompressionEngine<T, R>(
     private val areAllEquivalent: (List<T>) -> Boolean,
     private val buildTypeFn: (String) -> String,
     private val normalizeSuffix: (String) -> String = ::normalizeVariantSuffix,
+    private val compressName: (data: T, fromSuffix: String, toSuffix: String) -> String =
+        { data, from, to -> nameOf(data).removeSuffix(from) + to },
     private val resultFactory: (Map<String, T>, Map<String, String>, Set<String>) -> R
 ) {
     /**
@@ -230,8 +232,8 @@ internal class VariantCompressionEngine<T, R>(
 
         // Derive compressed name from representative
         val representativeSuffix = normalizeSuffix(representative.key)
-        val baseName = nameOf(representative.value).removeSuffix(representativeSuffix)
-        val compressedData = copyWithName(representative.value, baseName + suffix)
+        val compressedName = compressName(representative.value, representativeSuffix, suffix)
+        val compressedData = copyWithName(representative.value, compressedName)
 
         // All variants map to the compressed suffix
         val variantMappings = variants.keys.associateWith { suffix }
@@ -329,8 +331,8 @@ internal class VariantCompressionEngine<T, R>(
         val representativeData = flavorCompressed.targetsBySuffix.getValue(representativeSuffix)
 
         // Remove suffix from name
-        val baseName = nameOf(representativeData).removeSuffix(representativeSuffix)
-        val fullyCompressedData = copyWithName(representativeData, baseName)
+        val compressedName = compressName(representativeData, representativeSuffix, "")
+        val fullyCompressedData = copyWithName(representativeData, compressedName)
 
         // All variants map to empty suffix
         val newVariantToSuffix = flavorCompressed.variantToSuffix.mapValues { "" }

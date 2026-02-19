@@ -18,6 +18,7 @@ package com.grab.grazel.gradle.variant
 
 import com.grab.grazel.bazel.starlark.BazelDependency
 import com.grab.grazel.migrate.android.AndroidUnitTestData
+import com.grab.grazel.migrate.android.FORMAT_UNIT_TEST_NAME
 import javax.inject.Inject
 
 /**
@@ -35,11 +36,13 @@ internal interface UnitTestVariantCompressor {
      * Unlike library compression, this does NOT check dependency blocking since test targets
      * are never used as dependencies by other modules.
      *
+     * @param projectName The project name, used for deriving fully compressed target names
      * @param variants Map of variant name to AndroidUnitTestData
      * @param buildTypeFn Function to extract build type name from variant name
      * @return UnitTestCompressionResult containing compressed test targets and mappings
      */
     fun compress(
+        projectName: String,
         variants: Map<String, AndroidUnitTestData>,
         buildTypeFn: (String) -> String
     ): UnitTestCompressionResult
@@ -50,29 +53,29 @@ internal class DefaultUnitTestVariantCompressor @Inject constructor(
 ) : UnitTestVariantCompressor {
 
     override fun compress(
+        projectName: String,
         variants: Map<String, AndroidUnitTestData>,
         buildTypeFn: (String) -> String
     ): UnitTestCompressionResult {
-        // Create engine with test-specific adapters
         val engine = VariantCompressionEngine<AndroidUnitTestData, UnitTestCompressionResult>(
             nameOf = { it.name },
             copyWithName = { data, newName -> data.copy(name = newName) },
             areAllEquivalent = { equivalenceChecker.areAllEquivalent(it) },
             buildTypeFn = buildTypeFn,
+            compressName = { _, _, toSuffix ->
+                FORMAT_UNIT_TEST_NAME.format(projectName, toSuffix)
+            },
             resultFactory = { targets, mapping, expanded ->
                 UnitTestCompressionResult(targets, mapping, expanded)
             }
         )
 
-        // Configure Phase 2: cross-build-type compression for tests
-        // Tests don't need dependency checks since they're leaf nodes
         val crossBuildTypeConfig = VariantCompressionEngine.CrossBuildTypeConfig<AndroidUnitTestData>(
             enabled = true,
             equivalenceCheck = { equivalenceChecker.areAllEquivalent(it) },
-            dependencyCheck = null  // Tests are leaf nodes, no dependency blocking needed
+            dependencyCheck = null
         )
 
-        // Run both Phase 1 and Phase 2 compression
         return engine.compressWithoutBlocking(
             variants = variants,
             crossBuildType = crossBuildTypeConfig
@@ -121,19 +124,16 @@ internal class DefaultUnitTestEquivalenceChecker @Inject constructor() : UnitTes
     }
 
     /**
-     * Normalizes dependencies by removing variant suffixes for comparison.
+     * Normalizes dependencies by project identity for comparison.
      *
-     * This allows tests to be equivalent even if they reference different variant
-     * suffixes of the same library (e.g., "-free-debug" vs "-paid-debug").
+     * For project dependencies, uses the project path (ignoring variant suffix)
+     * so that tests depending on different variant suffixes of the same library
+     * are treated as equivalent.
      */
     private fun normalizeDeps(deps: List<BazelDependency>): Set<String> {
         return deps.map { dep ->
             when (dep) {
-                is BazelDependency.ProjectDependency -> {
-                    val basePath = dep.dependencyProject.path
-                    // Remove suffix pattern like "-debug", "-free-debug"
-                    basePath.replace(Regex("-[a-z]+(-[a-z]+)?$"), "")
-                }
+                is BazelDependency.ProjectDependency -> dep.dependencyProject.path
                 else -> dep.toString()
             }
         }.toSet()
