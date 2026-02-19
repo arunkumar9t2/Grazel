@@ -60,6 +60,36 @@ internal interface VariantCompressionService : BuildService<VariantCompressionSe
      */
     fun isRegistered(projectPath: String): Boolean
 
+    /**
+     * Register a compression result for a project with a specific variant type.
+     *
+     * This allows storing separate compression results for different variant types
+     * (e.g., AndroidBuild vs Test) for the same project.
+     *
+     * @param projectPath The Gradle project path
+     * @param variantType The type of variant (AndroidBuild, Test, etc.)
+     * @param result The compression result to store
+     */
+    fun register(projectPath: String, variantType: VariantType, result: VariantCompressionResult)
+
+    /**
+     * Get the compression result for a project and variant type.
+     *
+     * @param projectPath The Gradle project path
+     * @param variantType The type of variant
+     * @return The compression result if registered, null otherwise
+     */
+    fun get(projectPath: String, variantType: VariantType): VariantCompressionResult?
+
+    /**
+     * Check if a compression result has been registered for a project and variant type.
+     *
+     * @param projectPath The Gradle project path
+     * @param variantType The type of variant
+     * @return true if a result is registered, false otherwise
+     */
+    fun isRegistered(projectPath: String, variantType: VariantType): Boolean
+
     companion object {
         internal const val SERVICE_NAME = "VariantCompressionService"
     }
@@ -70,21 +100,58 @@ internal interface VariantCompressionService : BuildService<VariantCompressionSe
 /**
  * Default implementation of [VariantCompressionService].
  *
- * Stores compression results in a mutable map keyed by project path.
+ * Stores compression results in a mutable map keyed by project path and variant type.
+ * Internally stores results as Any to support both VariantCompressionResult and
+ * UnitTestCompressionResult types.
  */
 internal abstract class DefaultVariantCompressionService : VariantCompressionService {
-    private val results = mutableMapOf<String, VariantCompressionResult>()
+    private val results = mutableMapOf<String, Any>()
 
+    /**
+     * Creates a composite key from project path and variant type.
+     */
+    private fun key(projectPath: String, variantType: VariantType): String =
+        "$projectPath:${variantType.name}"
+
+    // Backward compatibility: delegate to type-aware methods with AndroidBuild as default
     override fun register(projectPath: String, result: VariantCompressionResult) {
-        results[projectPath] = result
+        register(projectPath, VariantType.AndroidBuild, result)
     }
 
     override fun get(projectPath: String): VariantCompressionResult? {
-        return results[projectPath]
+        return get(projectPath, VariantType.AndroidBuild)
     }
 
     override fun isRegistered(projectPath: String): Boolean {
-        return projectPath in results
+        return isRegistered(projectPath, VariantType.AndroidBuild)
+    }
+
+    // Type-aware implementations
+    override fun register(projectPath: String, variantType: VariantType, result: VariantCompressionResult) {
+        results[key(projectPath, variantType)] = result
+    }
+
+    override fun get(projectPath: String, variantType: VariantType): VariantCompressionResult? {
+        return results[key(projectPath, variantType)] as? VariantCompressionResult
+    }
+
+    override fun isRegistered(projectPath: String, variantType: VariantType): Boolean {
+        return key(projectPath, variantType) in results
+    }
+
+    /**
+     * Register a test compression result for a project.
+     * Stored separately from library results using the variant type in the key.
+     */
+    internal fun registerTestResult(projectPath: String, result: UnitTestCompressionResult) {
+        results[key(projectPath, VariantType.Test)] = result
+    }
+
+    /**
+     * Get the test compression result for a project.
+     */
+    internal fun getTestResult(projectPath: String): UnitTestCompressionResult? {
+        return results[key(projectPath, VariantType.Test)] as? UnitTestCompressionResult
     }
 
     override fun close() {

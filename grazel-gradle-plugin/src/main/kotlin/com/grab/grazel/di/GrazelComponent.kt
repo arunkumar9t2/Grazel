@@ -32,6 +32,7 @@ import com.grab.grazel.gradle.dependencies.DependenciesDataSource
 import com.grab.grazel.gradle.dependencies.DependenciesModule
 import com.grab.grazel.gradle.variant.AndroidVariantDataSource
 import com.grab.grazel.gradle.variant.DefaultVariantCompressionService
+import com.grab.grazel.gradle.variant.UnitTestVariantCompressor
 import com.grab.grazel.gradle.variant.VariantBuilder
 import com.grab.grazel.gradle.variant.VariantCompressor
 import com.grab.grazel.gradle.variant.VariantMatcher
@@ -43,6 +44,7 @@ import com.grab.grazel.migrate.android.AndroidBinaryDataExtractor
 import com.grab.grazel.migrate.android.AndroidInstrumentationBinaryDataExtractor
 import com.grab.grazel.migrate.android.AndroidLibraryDataExtractor
 import com.grab.grazel.migrate.android.AndroidTestDataExtractor
+import com.grab.grazel.migrate.android.AndroidUnitTestDataExtractor
 import com.grab.grazel.migrate.android.ManifestValuesBuilder
 import com.grab.grazel.migrate.dependencies.ArtifactPinner
 import com.grab.grazel.migrate.dependencies.MavenInstallArtifactsCalculator
@@ -90,10 +92,12 @@ internal interface GrazelComponent {
     fun androidLibraryDataExtractor(): Lazy<AndroidLibraryDataExtractor>
     fun androidBinaryDataExtractor(): Lazy<AndroidBinaryDataExtractor>
     fun androidTestDataExtractor(): Lazy<AndroidTestDataExtractor>
+    fun androidUnitTestDataExtractor(): Lazy<AndroidUnitTestDataExtractor>
 
     fun variantBuilder(): Lazy<VariantBuilder>
     fun variantMatcher(): Lazy<VariantMatcher>
     fun variantCompressor(): Lazy<VariantCompressor>
+    fun unitTestVariantCompressor(): Lazy<UnitTestVariantCompressor>
 
     fun manifestValuesBuilder(): ManifestValuesBuilder
 

@@ -89,29 +89,22 @@ constructor(
     }
 
     private fun unitTestsTargets(project: Project): List<AndroidUnitTestTarget> {
-        val compressionResult = variantCompressionService.get().get(project.path)
-        val testVariants = variantMatcher.matchedVariants(project, VariantType.Test)
-        return if (compressionResult != null) {
-            // Deduplicate by compression suffix: only emit one test per unique suffix
-            val variantsBySuffix = testVariants.groupBy { matchedVariant ->
-                variantCompressionService.get().resolveSuffix(
-                    projectPath = project.path,
-                    variantName = matchedVariant.variantName,
-                    fallbackSuffix = matchedVariant.nameSuffix,
-                    logger = project.logger
-                )
-            }
+        project.logger.lifecycle("[UNIT TEST TARGETS] Retrieving test compression result for ${project.path}")
+        // Try to get test-specific compression result
+        val testResult = variantCompressionService.get().getTestResult(project.path)
+        project.logger.lifecycle("[UNIT TEST TARGETS] Test result: ${if (testResult != null) "FOUND (${testResult.targets.size} targets)" else "NOT FOUND"}")
 
-            // Pick first variant alphabetically as representative for each suffix
-            variantsBySuffix.values.map { variantsForSuffix ->
-                val representative = variantsForSuffix.sortedBy { it.variantName }.first()
-                unitTestDataExtractor.extract(project, representative).toUnitTestTarget()
-            }
+        return if (testResult != null) {
+            // Use compressed test targets directly
+            project.logger.lifecycle("[UNIT TEST TARGETS] Using compressed test targets: ${testResult.targets.map { it.name }}")
+            testResult.targets.map { it.toUnitTestTarget() }
         } else {
-            // Fallback: extract test for every variant
-            project.logger.warn(
-                "No compression result for ${project.path}, generating uncompressed unit test targets"
+            // Fallback: generate uncompressed test targets
+            project.logger.lifecycle(
+                "[UNIT TEST TARGETS] No test compression result for ${project.path}, generating uncompressed unit test targets"
             )
+            val testVariants = variantMatcher.matchedVariants(project, VariantType.Test)
+            project.logger.lifecycle("[UNIT TEST TARGETS] Found ${testVariants.size} uncompressed test variants")
             testVariants.map { matchedVariant ->
                 unitTestDataExtractor.extract(project, matchedVariant).toUnitTestTarget()
             }

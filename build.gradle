@@ -55,7 +55,7 @@ grazel {
         multiDexEnabled = true
         incrementalDexing = true
         variantFilter { variant ->
-            variant.setIgnore(variant.buildType.name != "debug")
+            // variant.setIgnore(variant.buildType.name != "debug")
         }
         features {
             dataBindingMetaData = true

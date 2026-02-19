@@ -23,6 +23,7 @@ import com.grab.grazel.gradle.dependencies.DefaultDependencyResolutionService
 import com.grab.grazel.gradle.dependencies.TopologicalSorter
 import com.grab.grazel.gradle.isAndroidLibrary
 import com.grab.grazel.gradle.variant.DefaultVariantCompressionService
+import com.grab.grazel.gradle.variant.UnitTestVariantCompressor
 import com.grab.grazel.gradle.variant.VariantCompressionDecision.Compressed
 import com.grab.grazel.gradle.variant.VariantCompressionDecision.Expanded
 import com.grab.grazel.gradle.variant.VariantCompressionDecision.FullyCompressed
@@ -32,6 +33,7 @@ import com.grab.grazel.gradle.variant.VariantCompressor
 import com.grab.grazel.gradle.variant.VariantMatcher
 import com.grab.grazel.gradle.variant.VariantType
 import com.grab.grazel.migrate.android.AndroidLibraryDataExtractor
+import com.grab.grazel.migrate.android.AndroidUnitTestDataExtractor
 import com.grab.grazel.util.GradleProvider
 import com.grab.grazel.util.Json
 import dagger.Lazy
@@ -67,8 +69,10 @@ internal open class AnalyzeVariantCompressionTask
 @Inject
 constructor(
     private val androidLibraryDataExtractor: Lazy<AndroidLibraryDataExtractor>,
+    private val androidUnitTestDataExtractor: Lazy<AndroidUnitTestDataExtractor>,
     private val variantMatcher: Lazy<VariantMatcher>,
     private val variantCompressor: Lazy<VariantCompressor>,
+    private val unitTestVariantCompressor: Lazy<UnitTestVariantCompressor>,
     private val dependencyGraphsService: GradleProvider<DefaultDependencyGraphsService>,
     private val variantCompressionService: GradleProvider<DefaultVariantCompressionService>
 ) : DefaultTask() {
@@ -98,7 +102,12 @@ constructor(
             if (project.isAndroidLibrary) {
                 try {
                     val compressionResult = analyzeProject(project)
+                    // Store library compression result BEFORE analyzing tests so tests can reference it
                     variantCompressionService.get().register(project.path, compressionResult)
+
+                    // Analyze test variants independently AFTER library result is stored
+                    analyzeTestVariants(project)
+
                     projectSummaries.add(
                         ProjectSummary(
                             path = project.path,
@@ -192,7 +201,63 @@ constructor(
                 )
             }
         }
+
         return resultWithDecisions.result
+    }
+
+    /**
+     * Analyzes unit test variants for a project and compresses them independently.
+     *
+     * Test compression is separate from library compression because tests are never
+     * transitive dependencies, allowing them to compress even when library deps are expanded.
+     */
+    private fun analyzeTestVariants(project: Project) {
+        logger.lifecycle("[TEST COMPRESSION] Starting test analysis for ${project.path}")
+        val testVariants = variantMatcher.get().matchedVariants(project, VariantType.Test)
+        logger.lifecycle("[TEST COMPRESSION] Found ${testVariants.size} test variants for ${project.path}: ${testVariants.map { it.variantName }}")
+
+        if (testVariants.isEmpty()) {
+            logger.lifecycle("[TEST COMPRESSION] No test variants found for ${project.path}, skipping")
+            return
+        }
+
+        // Extract test data for each variant
+        val testVariantData = testVariants.associate { matchedVariant ->
+            matchedVariant.variantName to
+                androidUnitTestDataExtractor.get().extract(project, matchedVariant)
+        }
+        logger.lifecycle("[TEST COMPRESSION] Extracted test data for ${testVariantData.size} variants")
+
+        // Build type function for tests
+        fun testBuildTypeFn(variantName: String): String {
+            return testVariants.find { it.variantName == variantName }?.buildType ?: "debug"
+        }
+
+        // Compress tests independently (no dependency blocking)
+        val testCompressionResult = unitTestVariantCompressor.get().compress(
+            variants = testVariantData,
+            buildTypeFn = ::testBuildTypeFn
+        )
+
+        // Determine compression type for logging
+        val compressionType = when {
+            testCompressionResult.isFullyCompressed -> "fully compressed"
+            testCompressionResult.expandedBuildTypes.isEmpty() -> "flavor compressed"
+            else -> "partially expanded"
+        }
+
+        // Log results
+        logger.lifecycle(
+            "[TEST COMPRESSION] ${project.path} $compressionType: ${testCompressionResult.suffixes.size} test targets " +
+                "from ${testVariantData.size} test variants. Suffixes: ${testCompressionResult.suffixes}"
+        )
+
+        // Store test results using the dedicated test result method
+        variantCompressionService.get().registerTestResult(
+            project.path,
+            testCompressionResult
+        )
+        logger.lifecycle("[TEST COMPRESSION] Registered test result for ${project.path}")
     }
 
     companion object {
@@ -206,8 +271,10 @@ constructor(
             return rootProject.tasks.register<AnalyzeVariantCompressionTask>(
                 TASK_NAME,
                 grazelComponent.androidLibraryDataExtractor(),
+                grazelComponent.androidUnitTestDataExtractor(),
                 grazelComponent.variantMatcher(),
                 grazelComponent.variantCompressor(),
+                grazelComponent.unitTestVariantCompressor(),
                 grazelComponent.dependencyGraphsService(),
                 grazelComponent.variantCompressionService()
             ).apply {

@@ -96,7 +96,7 @@ android_binary(
         "//:dagger",
         "//:parcelize",
         "//flavors/sample-android-flavor:sample-android-flavor-demo-free-debug",
-        "//sample-android-library:sample-android-library-debug",
+        "//sample-android-library",
         "//sample-kotlin-library",
         "@debug_maven//:androidx_core_core",
         "@debug_maven//:androidx_lifecycle_lifecycle_common",
@@ -113,6 +113,121 @@ android_binary(
         "@maven//:androidx_compose_ui_ui_tooling",
         "@maven//:androidx_constraintlayout_constraintlayout",
         "@maven//:androidx_emoji2_emoji2",
+        "@maven//:com_google_ar_sceneform_ux_sceneform_ux",
+        "@maven//:com_jakewharton_timber_timber",
+        "@maven//:com_squareup_moshi_moshi",
+    ],
+)
+
+android_binary(
+    name = "sample-android-demo-free-staging",
+    srcs = glob([
+        "src/main/java/com/grab/grazel/android/sample/**/*.kt",
+    ]),
+    build_config = {
+        "strings": {
+            "SOME_STRING": "Something",
+            "VERSION_NAME": "1.0",
+            "VARIANT_NAME": "demoFreeStaging",
+        },
+        "booleans": {
+            "SOME_BOOLEAN": "false",
+        },
+        "ints": {
+            "SOME_INT": 0,
+            "VERSION_CODE": 1,
+        },
+        "longs": {
+            "SOME_LONG": 0,
+        },
+    },
+    crunch_png = False,
+    custom_package = "com.grab.grazel.android.sample",
+    debug_key = "//keystore:debug-keystore",
+    enable_compose = True,
+    enable_data_binding = True,
+    incremental_dexing = True,
+    lint_options = {
+        "enabled": True,
+        "config": "//:lint.xml",
+        "baseline": "lint_baseline.xml",
+        "lint_checks": [
+            "//lint/custom-lint-rules:custom-lint-rules",
+            "@lint_maven//:com_slack_lint_slack_lint_checks",
+        ],
+    },
+    manifest = "src/main/AndroidManifest.xml",
+    manifest_values = {
+        "applicationId": "com.grab.grazel.android.sample.free",
+        "libraryManifestHolder": "value",
+        "minSdkVersion": "21",
+        "orientation": "portrait",
+        "targetSdkVersion": "35",
+        "versionCode": "1",
+        "versionName": "1.0",
+    },
+    min_sdk_version = 0,
+    multidex = "native",
+    plugins = [
+        "//:moshi-kotlin-codegen-ksp",
+    ],
+    res_values = {
+        "strings": {
+            "generated_value": "This string was generated with resValue",
+            "type": "staging",
+            "flavor": "free",
+        },
+    },
+    resource_configuration_filters = [
+        "en",
+        "id",
+        "in",
+        "ja",
+        "km",
+        "ko",
+        "ms",
+        "my",
+        "th",
+        "vi",
+        "zh",
+    ],
+    resource_sets = {
+        "staging": {
+            "res": "src/main/res-staging",
+        },
+        "free": {
+            "res": "src/free/res",
+        },
+        "main": {
+            "res": "src/main/res",
+            "assets": "src/main/assets",
+            "manifest": "src/main/AndroidManifest.xml",
+        },
+    },
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        ":crashlytics-demo-free-staging",
+        "//:dagger",
+        "//:parcelize",
+        "//flavors/sample-android-flavor:sample-android-flavor-demo-free-staging",
+        "//sample-android-library",
+        "//sample-kotlin-library",
+        "@maven//:androidx_activity_activity",
+        "@maven//:androidx_activity_activity_compose",
+        "@maven//:androidx_appcompat_appcompat",
+        "@maven//:androidx_compose_foundation_foundation",
+        "@maven//:androidx_compose_foundation_foundation_layout",
+        "@maven//:androidx_compose_material_material",
+        "@maven//:androidx_compose_ui_ui",
+        "@maven//:androidx_compose_ui_ui_tooling",
+        "@maven//:androidx_constraintlayout_constraintlayout",
+        "@maven//:androidx_core_core",
+        "@maven//:androidx_emoji2_emoji2",
+        "@maven//:androidx_lifecycle_lifecycle_common",
+        "@maven//:androidx_lifecycle_lifecycle_runtime",
+        "@maven//:androidx_lifecycle_lifecycle_viewmodel",
         "@maven//:com_google_ar_sceneform_ux_sceneform_ux",
         "@maven//:com_jakewharton_timber_timber",
         "@maven//:com_squareup_moshi_moshi",
@@ -213,7 +328,7 @@ android_binary(
         "//:dagger",
         "//:parcelize",
         "//flavors/sample-android-flavor:sample-android-flavor-demo-paid-debug",
-        "//sample-android-library:sample-android-library-debug",
+        "//sample-android-library",
         "//sample-kotlin-library",
         "@debug_maven//:androidx_core_core",
         "@debug_maven//:androidx_lifecycle_lifecycle_common",
@@ -230,6 +345,121 @@ android_binary(
         "@maven//:androidx_compose_ui_ui_tooling",
         "@maven//:androidx_constraintlayout_constraintlayout",
         "@maven//:androidx_emoji2_emoji2",
+        "@maven//:com_google_ar_sceneform_ux_sceneform_ux",
+        "@maven//:com_jakewharton_timber_timber",
+        "@maven//:com_squareup_moshi_moshi",
+    ],
+)
+
+android_binary(
+    name = "sample-android-demo-paid-staging",
+    srcs = glob([
+        "src/main/java/com/grab/grazel/android/sample/**/*.kt",
+    ]),
+    build_config = {
+        "strings": {
+            "SOME_STRING": "Something",
+            "VERSION_NAME": "1.0",
+            "VARIANT_NAME": "demoPaidStaging",
+        },
+        "booleans": {
+            "SOME_BOOLEAN": "false",
+        },
+        "ints": {
+            "SOME_INT": 0,
+            "VERSION_CODE": 1,
+        },
+        "longs": {
+            "SOME_LONG": 0,
+        },
+    },
+    crunch_png = False,
+    custom_package = "com.grab.grazel.android.sample",
+    debug_key = "//keystore:debug-keystore",
+    enable_compose = True,
+    enable_data_binding = True,
+    incremental_dexing = True,
+    lint_options = {
+        "enabled": True,
+        "config": "//:lint.xml",
+        "baseline": "lint_baseline.xml",
+        "lint_checks": [
+            "//lint/custom-lint-rules:custom-lint-rules",
+            "@lint_maven//:com_slack_lint_slack_lint_checks",
+        ],
+    },
+    manifest = "src/main/AndroidManifest.xml",
+    manifest_values = {
+        "applicationId": "com.grab.grazel.android.sample.paid",
+        "libraryManifestHolder": "value",
+        "minSdkVersion": "21",
+        "orientation": "portrait",
+        "targetSdkVersion": "35",
+        "versionCode": "1",
+        "versionName": "1.0",
+    },
+    min_sdk_version = 0,
+    multidex = "native",
+    plugins = [
+        "//:moshi-kotlin-codegen-ksp",
+    ],
+    res_values = {
+        "strings": {
+            "generated_value": "This string was generated with resValue",
+            "type": "staging",
+            "flavor": "paid",
+        },
+    },
+    resource_configuration_filters = [
+        "en",
+        "id",
+        "in",
+        "ja",
+        "km",
+        "ko",
+        "ms",
+        "my",
+        "th",
+        "vi",
+        "zh",
+    ],
+    resource_sets = {
+        "staging": {
+            "res": "src/main/res-staging",
+        },
+        "paid": {
+            "res": "src/paid/res",
+        },
+        "main": {
+            "res": "src/main/res",
+            "assets": "src/main/assets",
+            "manifest": "src/main/AndroidManifest.xml",
+        },
+    },
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        ":crashlytics-demo-paid-staging",
+        "//:dagger",
+        "//:parcelize",
+        "//flavors/sample-android-flavor:sample-android-flavor-demo-paid-staging",
+        "//sample-android-library",
+        "//sample-kotlin-library",
+        "@maven//:androidx_activity_activity",
+        "@maven//:androidx_activity_activity_compose",
+        "@maven//:androidx_appcompat_appcompat",
+        "@maven//:androidx_compose_foundation_foundation",
+        "@maven//:androidx_compose_foundation_foundation_layout",
+        "@maven//:androidx_compose_material_material",
+        "@maven//:androidx_compose_ui_ui",
+        "@maven//:androidx_compose_ui_ui_tooling",
+        "@maven//:androidx_constraintlayout_constraintlayout",
+        "@maven//:androidx_core_core",
+        "@maven//:androidx_emoji2_emoji2",
+        "@maven//:androidx_lifecycle_lifecycle_common",
+        "@maven//:androidx_lifecycle_lifecycle_runtime",
+        "@maven//:androidx_lifecycle_lifecycle_viewmodel",
         "@maven//:com_google_ar_sceneform_ux_sceneform_ux",
         "@maven//:com_jakewharton_timber_timber",
         "@maven//:com_squareup_moshi_moshi",
@@ -330,7 +560,7 @@ android_binary(
         "//:dagger",
         "//:parcelize",
         "//flavors/sample-android-flavor:sample-android-flavor-full-free-debug",
-        "//sample-android-library:sample-android-library-debug",
+        "//sample-android-library",
         "//sample-kotlin-library",
         "@debug_maven//:androidx_core_core",
         "@debug_maven//:androidx_lifecycle_lifecycle_common",
@@ -347,6 +577,121 @@ android_binary(
         "@maven//:androidx_compose_ui_ui_tooling",
         "@maven//:androidx_constraintlayout_constraintlayout",
         "@maven//:androidx_emoji2_emoji2",
+        "@maven//:com_google_ar_sceneform_ux_sceneform_ux",
+        "@maven//:com_jakewharton_timber_timber",
+        "@maven//:com_squareup_moshi_moshi",
+    ],
+)
+
+android_binary(
+    name = "sample-android-full-free-staging",
+    srcs = glob([
+        "src/main/java/com/grab/grazel/android/sample/**/*.kt",
+    ]),
+    build_config = {
+        "strings": {
+            "SOME_STRING": "Something",
+            "VERSION_NAME": "1.0",
+            "VARIANT_NAME": "fullFreeStaging",
+        },
+        "booleans": {
+            "SOME_BOOLEAN": "false",
+        },
+        "ints": {
+            "SOME_INT": 0,
+            "VERSION_CODE": 1,
+        },
+        "longs": {
+            "SOME_LONG": 0,
+        },
+    },
+    crunch_png = False,
+    custom_package = "com.grab.grazel.android.sample",
+    debug_key = "//keystore:debug-keystore",
+    enable_compose = True,
+    enable_data_binding = True,
+    incremental_dexing = True,
+    lint_options = {
+        "enabled": True,
+        "config": "//:lint.xml",
+        "baseline": "lint_baseline.xml",
+        "lint_checks": [
+            "//lint/custom-lint-rules:custom-lint-rules",
+            "@lint_maven//:com_slack_lint_slack_lint_checks",
+        ],
+    },
+    manifest = "src/main/AndroidManifest.xml",
+    manifest_values = {
+        "applicationId": "com.grab.grazel.android.sample.free",
+        "libraryManifestHolder": "value",
+        "minSdkVersion": "21",
+        "orientation": "portrait",
+        "targetSdkVersion": "35",
+        "versionCode": "1",
+        "versionName": "1.0",
+    },
+    min_sdk_version = 0,
+    multidex = "native",
+    plugins = [
+        "//:moshi-kotlin-codegen-ksp",
+    ],
+    res_values = {
+        "strings": {
+            "generated_value": "This string was generated with resValue",
+            "type": "staging",
+            "flavor": "free",
+        },
+    },
+    resource_configuration_filters = [
+        "en",
+        "id",
+        "in",
+        "ja",
+        "km",
+        "ko",
+        "ms",
+        "my",
+        "th",
+        "vi",
+        "zh",
+    ],
+    resource_sets = {
+        "staging": {
+            "res": "src/main/res-staging",
+        },
+        "free": {
+            "res": "src/free/res",
+        },
+        "main": {
+            "res": "src/main/res",
+            "assets": "src/main/assets",
+            "manifest": "src/main/AndroidManifest.xml",
+        },
+    },
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        ":crashlytics-full-free-staging",
+        "//:dagger",
+        "//:parcelize",
+        "//flavors/sample-android-flavor:sample-android-flavor-full-free-staging",
+        "//sample-android-library",
+        "//sample-kotlin-library",
+        "@maven//:androidx_activity_activity",
+        "@maven//:androidx_activity_activity_compose",
+        "@maven//:androidx_appcompat_appcompat",
+        "@maven//:androidx_compose_foundation_foundation",
+        "@maven//:androidx_compose_foundation_foundation_layout",
+        "@maven//:androidx_compose_material_material",
+        "@maven//:androidx_compose_ui_ui",
+        "@maven//:androidx_compose_ui_ui_tooling",
+        "@maven//:androidx_constraintlayout_constraintlayout",
+        "@maven//:androidx_core_core",
+        "@maven//:androidx_emoji2_emoji2",
+        "@maven//:androidx_lifecycle_lifecycle_common",
+        "@maven//:androidx_lifecycle_lifecycle_runtime",
+        "@maven//:androidx_lifecycle_lifecycle_viewmodel",
         "@maven//:com_google_ar_sceneform_ux_sceneform_ux",
         "@maven//:com_jakewharton_timber_timber",
         "@maven//:com_squareup_moshi_moshi",
@@ -447,7 +792,7 @@ android_binary(
         "//:dagger",
         "//:parcelize",
         "//flavors/sample-android-flavor:sample-android-flavor-full-paid-debug",
-        "//sample-android-library:sample-android-library-debug",
+        "//sample-android-library",
         "//sample-kotlin-library",
         "@debug_maven//:androidx_core_core",
         "@debug_maven//:androidx_lifecycle_lifecycle_common",
@@ -470,6 +815,121 @@ android_binary(
     ],
 )
 
+android_binary(
+    name = "sample-android-full-paid-staging",
+    srcs = glob([
+        "src/main/java/com/grab/grazel/android/sample/**/*.kt",
+    ]),
+    build_config = {
+        "strings": {
+            "SOME_STRING": "Something",
+            "VERSION_NAME": "1.0",
+            "VARIANT_NAME": "fullPaidStaging",
+        },
+        "booleans": {
+            "SOME_BOOLEAN": "false",
+        },
+        "ints": {
+            "SOME_INT": 0,
+            "VERSION_CODE": 1,
+        },
+        "longs": {
+            "SOME_LONG": 0,
+        },
+    },
+    crunch_png = False,
+    custom_package = "com.grab.grazel.android.sample",
+    debug_key = "//keystore:debug-keystore",
+    enable_compose = True,
+    enable_data_binding = True,
+    incremental_dexing = True,
+    lint_options = {
+        "enabled": True,
+        "config": "//:lint.xml",
+        "baseline": "lint_baseline.xml",
+        "lint_checks": [
+            "//lint/custom-lint-rules:custom-lint-rules",
+            "@lint_maven//:com_slack_lint_slack_lint_checks",
+        ],
+    },
+    manifest = "src/main/AndroidManifest.xml",
+    manifest_values = {
+        "applicationId": "com.grab.grazel.android.sample.paid",
+        "libraryManifestHolder": "value",
+        "minSdkVersion": "21",
+        "orientation": "portrait",
+        "targetSdkVersion": "35",
+        "versionCode": "1",
+        "versionName": "1.0",
+    },
+    min_sdk_version = 0,
+    multidex = "native",
+    plugins = [
+        "//:moshi-kotlin-codegen-ksp",
+    ],
+    res_values = {
+        "strings": {
+            "generated_value": "This string was generated with resValue",
+            "type": "staging",
+            "flavor": "paid",
+        },
+    },
+    resource_configuration_filters = [
+        "en",
+        "id",
+        "in",
+        "ja",
+        "km",
+        "ko",
+        "ms",
+        "my",
+        "th",
+        "vi",
+        "zh",
+    ],
+    resource_sets = {
+        "staging": {
+            "res": "src/main/res-staging",
+        },
+        "paid": {
+            "res": "src/paid/res",
+        },
+        "main": {
+            "res": "src/main/res",
+            "assets": "src/main/assets",
+            "manifest": "src/main/AndroidManifest.xml",
+        },
+    },
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        ":crashlytics-full-paid-staging",
+        "//:dagger",
+        "//:parcelize",
+        "//flavors/sample-android-flavor:sample-android-flavor-full-paid-staging",
+        "//sample-android-library",
+        "//sample-kotlin-library",
+        "@maven//:androidx_activity_activity",
+        "@maven//:androidx_activity_activity_compose",
+        "@maven//:androidx_appcompat_appcompat",
+        "@maven//:androidx_compose_foundation_foundation",
+        "@maven//:androidx_compose_foundation_foundation_layout",
+        "@maven//:androidx_compose_material_material",
+        "@maven//:androidx_compose_ui_ui",
+        "@maven//:androidx_compose_ui_ui_tooling",
+        "@maven//:androidx_constraintlayout_constraintlayout",
+        "@maven//:androidx_core_core",
+        "@maven//:androidx_emoji2_emoji2",
+        "@maven//:androidx_lifecycle_lifecycle_common",
+        "@maven//:androidx_lifecycle_lifecycle_runtime",
+        "@maven//:androidx_lifecycle_lifecycle_viewmodel",
+        "@maven//:com_google_ar_sceneform_ux_sceneform_ux",
+        "@maven//:com_jakewharton_timber_timber",
+        "@maven//:com_squareup_moshi_moshi",
+    ],
+)
+
 crashlytics_android_library(
     name = "crashlytics-demo-free-debug",
     package_name = "com.grab.grazel.android.sample.free",
@@ -481,7 +941,27 @@ crashlytics_android_library(
 )
 
 crashlytics_android_library(
+    name = "crashlytics-demo-free-staging",
+    package_name = "com.grab.grazel.android.sample.free",
+    build_id = "042cb4d8-56f8-41a0-916a-9da28e94d1ba",
+    resource_files = google_services_xml(
+        package_name = "com.grab.grazel.android.sample.free",
+        google_services_json = "src/demoFree/google-services.json",
+    ),
+)
+
+crashlytics_android_library(
     name = "crashlytics-demo-paid-debug",
+    package_name = "com.grab.grazel.android.sample.paid",
+    build_id = "042cb4d8-56f8-41a0-916a-9da28e94d1ba",
+    resource_files = google_services_xml(
+        package_name = "com.grab.grazel.android.sample.paid",
+        google_services_json = "src/demoPaid/google-services.json",
+    ),
+)
+
+crashlytics_android_library(
+    name = "crashlytics-demo-paid-staging",
     package_name = "com.grab.grazel.android.sample.paid",
     build_id = "042cb4d8-56f8-41a0-916a-9da28e94d1ba",
     resource_files = google_services_xml(
@@ -501,7 +981,27 @@ crashlytics_android_library(
 )
 
 crashlytics_android_library(
+    name = "crashlytics-full-free-staging",
+    package_name = "com.grab.grazel.android.sample.free",
+    build_id = "042cb4d8-56f8-41a0-916a-9da28e94d1ba",
+    resource_files = google_services_xml(
+        package_name = "com.grab.grazel.android.sample.free",
+        google_services_json = "src/fullFree/google-services.json",
+    ),
+)
+
+crashlytics_android_library(
     name = "crashlytics-full-paid-debug",
+    package_name = "com.grab.grazel.android.sample.paid",
+    build_id = "042cb4d8-56f8-41a0-916a-9da28e94d1ba",
+    resource_files = google_services_xml(
+        package_name = "com.grab.grazel.android.sample.paid",
+        google_services_json = "src/fullPaid/google-services.json",
+    ),
+)
+
+crashlytics_android_library(
+    name = "crashlytics-full-paid-staging",
     package_name = "com.grab.grazel.android.sample.paid",
     build_id = "042cb4d8-56f8-41a0-916a-9da28e94d1ba",
     resource_files = google_services_xml(
@@ -543,7 +1043,7 @@ android_instrumentation_binary(
         "//:dagger",
         "//flavors/sample-android-flavor:sample-android-flavor-demo-free-debug",
         "//sample-android:lib_sample-android-demo-free-debug",
-        "//sample-android-library:sample-android-library-debug",
+        "//sample-android-library",
         "//sample-kotlin-library",
         "@android_test_maven//:androidx_test_monitor",
         "@debug_maven//:androidx_core_core",
@@ -602,7 +1102,7 @@ android_instrumentation_binary(
         "//:dagger",
         "//flavors/sample-android-flavor:sample-android-flavor-demo-paid-debug",
         "//sample-android:lib_sample-android-demo-paid-debug",
-        "//sample-android-library:sample-android-library-debug",
+        "//sample-android-library",
         "//sample-kotlin-library",
         "@android_test_maven//:androidx_test_monitor",
         "@debug_maven//:androidx_core_core",
@@ -661,7 +1161,7 @@ android_instrumentation_binary(
         "//:dagger",
         "//flavors/sample-android-flavor:sample-android-flavor-full-free-debug",
         "//sample-android:lib_sample-android-full-free-debug",
-        "//sample-android-library:sample-android-library-debug",
+        "//sample-android-library",
         "//sample-kotlin-library",
         "@android_test_maven//:androidx_test_monitor",
         "@debug_maven//:androidx_core_core",
@@ -720,7 +1220,7 @@ android_instrumentation_binary(
         "//:dagger",
         "//flavors/sample-android-flavor:sample-android-flavor-full-paid-debug",
         "//sample-android:lib_sample-android-full-paid-debug",
-        "//sample-android-library:sample-android-library-debug",
+        "//sample-android-library",
         "//sample-kotlin-library",
         "@android_test_maven//:androidx_test_monitor",
         "@debug_maven//:androidx_core_core",

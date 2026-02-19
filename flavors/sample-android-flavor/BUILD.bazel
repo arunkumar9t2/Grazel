@@ -46,7 +46,94 @@ android_library(
 )
 
 android_library(
+    name = "sample-android-flavor-demo-free-staging",
+    srcs = glob([
+        "src/main/java/com/grab/grazel/android/flavor/**/*.kt",
+        "src/demo/java/com/grab/grazel/android/flavor/HelloFlavorMessage.kt",
+    ]),
+    custom_package = "com.grab.grazel.android.flavor",
+    enable_compose = True,
+    enable_data_binding = True,
+    lint_options = {
+        "enabled": True,
+        "config": "//:lint.xml",
+    },
+    manifest = "src/main/AndroidManifest.xml",
+    res_values = {
+        "strings": {
+            "generated_value": "generated",
+        },
+    },
+    resource_sets = {
+        "demo": {
+            "res": "src/demo/res",
+        },
+        "free": {
+            "res": "src/free/res",
+        },
+        "main": {
+            "res": "src/main/res",
+            "manifest": "src/main/AndroidManifest.xml",
+        },
+    },
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        "//:parcelize",
+        "//flavors/sample-library-demo",
+        "@debug_maven//:androidx_core_core",
+        "@maven//:androidx_appcompat_appcompat",
+        "@maven//:androidx_compose_ui_ui",
+        "@maven//:androidx_constraintlayout_constraintlayout",
+        "@maven//:androidx_constraintlayout_constraintlayout_core",
+    ],
+)
+
+android_library(
     name = "sample-android-flavor-demo-paid-debug",
+    srcs = glob([
+        "src/main/java/com/grab/grazel/android/flavor/**/*.kt",
+        "src/demo/java/com/grab/grazel/android/flavor/HelloFlavorMessage.kt",
+    ]),
+    custom_package = "com.grab.grazel.android.flavor",
+    enable_compose = True,
+    enable_data_binding = True,
+    lint_options = {
+        "enabled": True,
+        "config": "//:lint.xml",
+    },
+    manifest = "src/main/AndroidManifest.xml",
+    res_values = {
+        "strings": {
+            "generated_value": "generated",
+        },
+    },
+    resource_sets = {
+        "demo": {
+            "res": "src/demo/res",
+        },
+        "main": {
+            "res": "src/main/res",
+            "manifest": "src/main/AndroidManifest.xml",
+        },
+    },
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        "//:parcelize",
+        "//flavors/sample-library-demo",
+        "@debug_maven//:androidx_core_core",
+        "@maven//:androidx_appcompat_appcompat",
+        "@maven//:androidx_compose_ui_ui",
+        "@maven//:androidx_constraintlayout_constraintlayout",
+        "@maven//:androidx_constraintlayout_constraintlayout_core",
+    ],
+)
+
+android_library(
+    name = "sample-android-flavor-demo-paid-staging",
     srcs = glob([
         "src/main/java/com/grab/grazel/android/flavor/**/*.kt",
         "src/demo/java/com/grab/grazel/android/flavor/HelloFlavorMessage.kt",
@@ -133,7 +220,94 @@ android_library(
 )
 
 android_library(
+    name = "sample-android-flavor-full-free-staging",
+    srcs = glob([
+        "src/main/java/com/grab/grazel/android/flavor/**/*.kt",
+        "src/full/java/com/grab/grazel/android/flavor/HelloFlavorMessage.kt",
+    ]),
+    custom_package = "com.grab.grazel.android.flavor",
+    enable_compose = True,
+    enable_data_binding = True,
+    lint_options = {
+        "enabled": True,
+        "config": "//:lint.xml",
+    },
+    manifest = "src/main/AndroidManifest.xml",
+    res_values = {
+        "strings": {
+            "generated_value": "generated",
+        },
+    },
+    resource_sets = {
+        "full": {
+            "res": "src/full/res",
+        },
+        "free": {
+            "res": "src/free/res",
+        },
+        "main": {
+            "res": "src/main/res",
+            "manifest": "src/main/AndroidManifest.xml",
+        },
+    },
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        "//:parcelize",
+        "//flavors/sample-library-full",
+        "@debug_maven//:androidx_core_core",
+        "@maven//:androidx_appcompat_appcompat",
+        "@maven//:androidx_compose_ui_ui",
+        "@maven//:androidx_constraintlayout_constraintlayout",
+        "@maven//:androidx_constraintlayout_constraintlayout_core",
+    ],
+)
+
+android_library(
     name = "sample-android-flavor-full-paid-debug",
+    srcs = glob([
+        "src/main/java/com/grab/grazel/android/flavor/**/*.kt",
+        "src/full/java/com/grab/grazel/android/flavor/HelloFlavorMessage.kt",
+    ]),
+    custom_package = "com.grab.grazel.android.flavor",
+    enable_compose = True,
+    enable_data_binding = True,
+    lint_options = {
+        "enabled": True,
+        "config": "//:lint.xml",
+    },
+    manifest = "src/main/AndroidManifest.xml",
+    res_values = {
+        "strings": {
+            "generated_value": "generated",
+        },
+    },
+    resource_sets = {
+        "full": {
+            "res": "src/full/res",
+        },
+        "main": {
+            "res": "src/main/res",
+            "manifest": "src/main/AndroidManifest.xml",
+        },
+    },
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        "//:parcelize",
+        "//flavors/sample-library-full",
+        "@debug_maven//:androidx_core_core",
+        "@maven//:androidx_appcompat_appcompat",
+        "@maven//:androidx_compose_ui_ui",
+        "@maven//:androidx_constraintlayout_constraintlayout",
+        "@maven//:androidx_constraintlayout_constraintlayout_core",
+    ],
+)
+
+android_library(
+    name = "sample-android-flavor-full-paid-staging",
     srcs = glob([
         "src/main/java/com/grab/grazel/android/flavor/**/*.kt",
         "src/full/java/com/grab/grazel/android/flavor/HelloFlavorMessage.kt",

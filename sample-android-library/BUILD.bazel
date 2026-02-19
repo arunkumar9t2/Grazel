@@ -1,7 +1,7 @@
 load("@grab_bazel_common//rules:defs.bzl", "android_library", "android_unit_test")
 
 android_library(
-    name = "sample-android-library-debug",
+    name = "sample-android-library",
     srcs = glob([
         "src/main/java/com/grab/grazel/android/sample/SampleViewModel.kt",
         "src/debug/kotlin/Empty.kt",
@@ -34,13 +34,13 @@ android_library(
 )
 
 android_unit_test(
-    name = "sample-android-library-debug-test",
+    name = "sample-android-library-test",
     size = "medium",
     srcs = glob([
         "src/test/java/com/grab/grazel/android/sample/SampleViewModelTest.kt",
     ]),
     associates = [
-        "//sample-android-library:sample-android-library-debug_kt",
+        "//sample-android-library:sample-android-library_kt",
     ],
     custom_package = "com.grab.grazel.android.sample.lib",
     resources = glob([
@@ -51,7 +51,7 @@ android_unit_test(
     ],
     deps = [
         "//:parcelize",
-        "//sample-android-library:sample-android-library-debug",
+        "//sample-android-library",
         "@maven//:com_squareup_moshi_moshi",
         "@maven//:junit_junit",
     ],

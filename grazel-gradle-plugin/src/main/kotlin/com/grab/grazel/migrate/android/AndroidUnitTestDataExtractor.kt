@@ -70,12 +70,29 @@ constructor(
     private val kotlinExtension: KotlinExtension get() = grazelExtension.rules.kotlin
 
     override fun extract(project: Project, matchedVariant: MatchedVariant): AndroidUnitTestData {
-        val targetSuffix = variantCompressionService.get().resolveSuffix(
-            projectPath = project.path,
-            variantName = matchedVariant.variantName,
-            fallbackSuffix = matchedVariant.nameSuffix,
-            logger = project.logger
-        )
+        // Get the library variant name by removing "UnitTest" suffix from test variant name
+        // E.g., "demoFreeDebugUnitTest" -> "demoFreeDebug"
+        val libraryVariantName = matchedVariant.variantName.removeSuffix("UnitTest")
+
+        // Resolve library suffix from library compression result
+        // This gets the suffix that the library target uses (could be empty if fully compressed)
+        val libraryResult = variantCompressionService.get().get(project.path)
+        project.logger.lifecycle("[TEST DATA] ${project.path} library compression result: suffixes=${libraryResult?.suffixes}, isFullyCompressed=${libraryResult?.isFullyCompressed}")
+
+        val targetSuffix = if (libraryResult != null) {
+            // Try to find the suffix for this specific library variant
+            val variantSuffix = libraryResult.suffixForVariantOrNull(libraryVariantName)
+            project.logger.lifecycle("[TEST DATA] ${project.path} variant '$libraryVariantName' maps to suffix: '$variantSuffix'")
+
+            variantSuffix
+                ?: libraryResult.suffixes.firstOrNull()  // Fallback to first suffix if variant not found (e.g., fully compressed)
+                ?: matchedVariant.nameSuffix  // Final fallback
+        } else {
+            project.logger.warn("No library compression result for ${project.path}, using fallback suffix for tests")
+            matchedVariant.nameSuffix
+        }
+
+        project.logger.lifecycle("[TEST DATA] ${project.path} test ${matchedVariant.variantName}: library variant=$libraryVariantName, resolved suffix='$targetSuffix'")
 
         val name = FORMAT_UNIT_TEST_NAME.format(
             project.name,

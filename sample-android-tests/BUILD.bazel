@@ -35,6 +35,40 @@ android_instrumentation_binary(
 )
 
 android_instrumentation_binary(
+    name = "sample-android-tests-demo-free-staging",
+    srcs = glob([
+        "src/main/java/com/grab/grazel/android/sample/tests/**/*.kt",
+    ]),
+    custom_package = "com.grab.grazel.android.sample.tests",
+    debug_key = "//keystore:debug-keystore",
+    enable_compose = True,
+    instruments = "//sample-android:sample-android-demo-free-staging",
+    manifest_values = {
+        "applicationId": "com.grab.grazel.android.sample.tests",
+        "minSdkVersion": "21",
+        "orientation": "portrait",
+        "targetSdkVersion": "34",
+    },
+    min_sdk_version = 0,
+    resource_files = glob([
+        "src/main/res/values/**",
+    ]),
+    target_package = "com.grab.grazel.android.sample.free",
+    test_instrumentation_runner = "androidx.test.runner.AndroidJUnitRunner",
+    deps = [
+        "//sample-android:lib_sample-android-demo-free-staging",
+        "@maven//:androidx_compose_ui_ui_test_junit4",
+        "@maven//:androidx_compose_ui_ui_test_manifest",
+        "@maven//:androidx_test_espresso_espresso_core",
+        "@maven//:androidx_test_ext_junit",
+        "@maven//:androidx_test_rules",
+        "@maven//:androidx_test_runner",
+        "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
+    ],
+)
+
+android_instrumentation_binary(
     name = "sample-android-tests-demo-paid-debug",
     srcs = glob([
         "src/main/java/com/grab/grazel/android/sample/tests/**/*.kt",
@@ -57,6 +91,40 @@ android_instrumentation_binary(
     test_instrumentation_runner = "androidx.test.runner.AndroidJUnitRunner",
     deps = [
         "//sample-android:lib_sample-android-demo-paid-debug",
+        "@maven//:androidx_compose_ui_ui_test_junit4",
+        "@maven//:androidx_compose_ui_ui_test_manifest",
+        "@maven//:androidx_test_espresso_espresso_core",
+        "@maven//:androidx_test_ext_junit",
+        "@maven//:androidx_test_rules",
+        "@maven//:androidx_test_runner",
+        "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
+    ],
+)
+
+android_instrumentation_binary(
+    name = "sample-android-tests-demo-paid-staging",
+    srcs = glob([
+        "src/main/java/com/grab/grazel/android/sample/tests/**/*.kt",
+    ]),
+    custom_package = "com.grab.grazel.android.sample.tests",
+    debug_key = "//keystore:debug-keystore",
+    enable_compose = True,
+    instruments = "//sample-android:sample-android-demo-paid-staging",
+    manifest_values = {
+        "applicationId": "com.grab.grazel.android.sample.tests",
+        "minSdkVersion": "21",
+        "orientation": "portrait",
+        "targetSdkVersion": "34",
+    },
+    min_sdk_version = 0,
+    resource_files = glob([
+        "src/main/res/values/**",
+    ]),
+    target_package = "com.grab.grazel.android.sample.paid",
+    test_instrumentation_runner = "androidx.test.runner.AndroidJUnitRunner",
+    deps = [
+        "//sample-android:lib_sample-android-demo-paid-staging",
         "@maven//:androidx_compose_ui_ui_test_junit4",
         "@maven//:androidx_compose_ui_ui_test_manifest",
         "@maven//:androidx_test_espresso_espresso_core",
@@ -103,6 +171,40 @@ android_instrumentation_binary(
 )
 
 android_instrumentation_binary(
+    name = "sample-android-tests-full-free-staging",
+    srcs = glob([
+        "src/main/java/com/grab/grazel/android/sample/tests/**/*.kt",
+    ]),
+    custom_package = "com.grab.grazel.android.sample.tests",
+    debug_key = "//keystore:debug-keystore",
+    enable_compose = True,
+    instruments = "//sample-android:sample-android-full-free-staging",
+    manifest_values = {
+        "applicationId": "com.grab.grazel.android.sample.tests",
+        "minSdkVersion": "21",
+        "orientation": "portrait",
+        "targetSdkVersion": "34",
+    },
+    min_sdk_version = 0,
+    resource_files = glob([
+        "src/main/res/values/**",
+    ]),
+    target_package = "com.grab.grazel.android.sample.free",
+    test_instrumentation_runner = "androidx.test.runner.AndroidJUnitRunner",
+    deps = [
+        "//sample-android:lib_sample-android-full-free-staging",
+        "@maven//:androidx_compose_ui_ui_test_junit4",
+        "@maven//:androidx_compose_ui_ui_test_manifest",
+        "@maven//:androidx_test_espresso_espresso_core",
+        "@maven//:androidx_test_ext_junit",
+        "@maven//:androidx_test_rules",
+        "@maven//:androidx_test_runner",
+        "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
+    ],
+)
+
+android_instrumentation_binary(
     name = "sample-android-tests-full-paid-debug",
     srcs = glob([
         "src/main/java/com/grab/grazel/android/sample/tests/**/*.kt",
@@ -125,6 +227,40 @@ android_instrumentation_binary(
     test_instrumentation_runner = "androidx.test.runner.AndroidJUnitRunner",
     deps = [
         "//sample-android:lib_sample-android-full-paid-debug",
+        "@maven//:androidx_compose_ui_ui_test_junit4",
+        "@maven//:androidx_compose_ui_ui_test_manifest",
+        "@maven//:androidx_test_espresso_espresso_core",
+        "@maven//:androidx_test_ext_junit",
+        "@maven//:androidx_test_rules",
+        "@maven//:androidx_test_runner",
+        "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
+    ],
+)
+
+android_instrumentation_binary(
+    name = "sample-android-tests-full-paid-staging",
+    srcs = glob([
+        "src/main/java/com/grab/grazel/android/sample/tests/**/*.kt",
+    ]),
+    custom_package = "com.grab.grazel.android.sample.tests",
+    debug_key = "//keystore:debug-keystore",
+    enable_compose = True,
+    instruments = "//sample-android:sample-android-full-paid-staging",
+    manifest_values = {
+        "applicationId": "com.grab.grazel.android.sample.tests",
+        "minSdkVersion": "21",
+        "orientation": "portrait",
+        "targetSdkVersion": "34",
+    },
+    min_sdk_version = 0,
+    resource_files = glob([
+        "src/main/res/values/**",
+    ]),
+    target_package = "com.grab.grazel.android.sample.paid",
+    test_instrumentation_runner = "androidx.test.runner.AndroidJUnitRunner",
+    deps = [
+        "//sample-android:lib_sample-android-full-paid-staging",
         "@maven//:androidx_compose_ui_ui_test_junit4",
         "@maven//:androidx_compose_ui_ui_test_manifest",
         "@maven//:androidx_test_espresso_espresso_core",

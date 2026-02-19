@@ -27,6 +27,12 @@ internal interface VariantModule {
     fun DefaultVariantCompressor.bindCompressor(): VariantCompressor
 
     @Binds
+    fun DefaultUnitTestVariantCompressor.bindTestCompressor(): UnitTestVariantCompressor
+
+    @Binds
+    fun DefaultUnitTestEquivalenceChecker.bindTestEquivalenceChecker(): UnitTestEquivalenceChecker
+
+    @Binds
     fun DefaultDependencyNormalizer.bindNormalizer(): DependencyNormalizer
 
     companion object {

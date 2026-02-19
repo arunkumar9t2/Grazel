@@ -17,6 +17,7 @@
 package com.grab.grazel.gradle.variant
 
 import com.grab.grazel.migrate.android.AndroidLibraryData
+import com.grab.grazel.migrate.android.AndroidUnitTestData
 
 /**
  * Stores the result of variant compression for a single project.
@@ -33,10 +34,10 @@ import com.grab.grazel.migrate.android.AndroidLibraryData
  * @property expandedBuildTypes Set of build type names that should remain expanded
  */
 internal data class VariantCompressionResult(
-    val targetsBySuffix: Map<String, AndroidLibraryData>,
-    val variantToSuffix: Map<String, String>,
-    val expandedBuildTypes: Set<String>
-) {
+    override val targetsBySuffix: Map<String, AndroidLibraryData>,
+    override val variantToSuffix: Map<String, String>,
+    override val expandedBuildTypes: Set<String>
+) : CompressionResult<AndroidLibraryData> {
     init {
         // Validate that all suffix references in variantToSuffix exist in targetsBySuffix
         val missingSuffixes = variantToSuffix.values.toSet() - targetsBySuffix.keys
@@ -109,6 +110,91 @@ internal data class VariantCompressionResult(
     companion object Companion {
         /** Returns an empty VariantCompressionResult with no targets or mappings. */
         fun empty(): VariantCompressionResult = VariantCompressionResult(
+            targetsBySuffix = emptyMap(),
+            variantToSuffix = emptyMap(),
+            expandedBuildTypes = emptySet()
+        )
+    }
+}
+
+/**
+ * Compression result specifically for unit test variants.
+ *
+ * Similar to [VariantCompressionResult] but stores [AndroidUnitTestData] to preserve
+ * test-specific fields like testSize. Tests can compress independently of their library
+ * dependencies since test targets are never transitive dependencies.
+ *
+ * @property targetsBySuffix Map from target suffix to AndroidUnitTestData (1:1)
+ * @property variantToSuffix Map from variant name to target suffix (many:1)
+ * @property expandedBuildTypes Set of build type names that should remain expanded
+ */
+internal data class UnitTestCompressionResult(
+    override val targetsBySuffix: Map<String, AndroidUnitTestData>,
+    override val variantToSuffix: Map<String, String>,
+    override val expandedBuildTypes: Set<String> = emptySet()
+) : CompressionResult<AndroidUnitTestData> {
+    init {
+        // Validate that all suffix references in variantToSuffix exist in targetsBySuffix
+        val missingSuffixes = variantToSuffix.values.toSet() - targetsBySuffix.keys
+        require(missingSuffixes.isEmpty()) {
+            "Variant mappings reference non-existent suffixes: $missingSuffixes"
+        }
+    }
+
+    /** Returns the set of all target suffixes. */
+    val suffixes: Set<String>
+        get() = targetsBySuffix.keys
+
+    /**
+     * Returns true if this test is fully compressed (single target with no suffix).
+     *
+     * Full compression occurs when:
+     * - There is exactly one target
+     * - That target has an empty suffix (no build-type suffix)
+     * - No build types are expanded
+     */
+    val isFullyCompressed: Boolean
+        get() = targetsBySuffix.size == 1 &&
+            expandedBuildTypes.isEmpty() &&
+            targetsBySuffix.keys.singleOrNull() == ""
+
+    /** Returns the list of all target data objects. */
+    val targets: List<AndroidUnitTestData>
+        get() = targetsBySuffix.values.toList()
+
+    /**
+     * Returns the AndroidUnitTestData for the given suffix.
+     *
+     * @throws NoSuchElementException if suffix does not exist
+     */
+    fun dataForSuffix(suffix: String): AndroidUnitTestData {
+        return targetsBySuffix[suffix]
+            ?: throw NoSuchElementException("No test target data found for suffix: $suffix")
+    }
+
+    /**
+     * Returns the target suffix for the given variant name.
+     *
+     * @throws NoSuchElementException if variant does not exist
+     */
+    fun suffixForVariant(variantName: String): String {
+        return variantToSuffix[variantName]
+            ?: throw NoSuchElementException("No suffix mapping found for variant: $variantName")
+    }
+
+    /** Returns the target suffix for the given variant name, or null if not found. */
+    fun suffixForVariantOrNull(variantName: String): String? {
+        return variantToSuffix[variantName]
+    }
+
+    /** Returns true if the given build type should remain expanded (not compressed). */
+    fun isExpanded(buildType: String): Boolean {
+        return buildType in expandedBuildTypes
+    }
+
+    companion object {
+        /** Returns an empty UnitTestCompressionResult with no targets or mappings. */
+        fun empty() = UnitTestCompressionResult(
             targetsBySuffix = emptyMap(),
             variantToSuffix = emptyMap(),
             expandedBuildTypes = emptySet()

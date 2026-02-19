@@ -56,73 +56,6 @@ internal data class CompressionResultWithDecisions(
     val decisions: List<VariantCompressionDecision>
 )
 
-// =============================================================================
-// Internal Types for Flavor Compression
-// =============================================================================
-
-/**
- * Represents the decision for how to handle variants within a single build type.
- *
- * This sealed class encapsulates the three possible outcomes when processing variants
- * for a build type during flavor compression.
- */
-private sealed class BuildTypeDecision {
-    /** Compress all variants into a single target with the build type as suffix */
-    data class Compress(
-        val buildType: String,
-        val suffix: String,
-        val variants: Map<String, AndroidLibraryData>
-    ) : BuildTypeDecision()
-
-    /** Keep each variant as a separate target (compression blocked or variants differ) */
-    data class Expand(
-        val buildType: String,
-        val reason: String,
-        val variants: Map<String, AndroidLibraryData>
-    ) : BuildTypeDecision()
-
-    /** Only one variant exists - nothing to compress */
-    data class Single(
-        val buildType: String,
-        val variantName: String,
-        val data: AndroidLibraryData
-    ) : BuildTypeDecision()
-}
-
-/**
- * Result of applying a [BuildTypeDecision] to produce targets and mappings.
- */
-private data class BuildTypeResult(
-    val targetsBySuffix: Map<String, AndroidLibraryData>,
-    val variantToSuffix: Map<String, String>,
-    val isExpanded: Boolean,
-    val decision: VariantCompressionDecision
-)
-
-/**
- * Aggregated result from flavor compression (compressing variants within each build type).
- *
- * Contains all the data accumulated from processing each build type, ready for
- * potential build-type compression (merging across build types).
- */
-private data class FlavorCompressionResult(
-    val targetsBySuffix: Map<String, AndroidLibraryData>,
-    val variantToSuffix: Map<String, String>,
-    val expandedBuildTypes: Set<String>,
-    val decisions: List<VariantCompressionDecision>
-) {
-    fun toCompressionResult() = VariantCompressionResult(
-        targetsBySuffix = targetsBySuffix,
-        variantToSuffix = variantToSuffix,
-        expandedBuildTypes = expandedBuildTypes
-    )
-
-    fun toResultWithDecisions() = CompressionResultWithDecisions(
-        result = toCompressionResult(),
-        decisions = decisions
-    )
-}
-
 /**
  * Compresses Android variant targets by grouping equivalent variants together.
  *
@@ -137,13 +70,16 @@ internal interface VariantCompressor {
      * @param buildTypeFn Function to extract build type name from variant name
      * @param dependencyVariantCompressionResults Map of dependency project to their
      *    CompressionResult
+     * @param checkDependencyBlocking If true, compression is blocked when dependencies are expanded.
+     *    If false, compression proceeds regardless of dependency state (for test targets).
      * @return CompressionResultWithDecisions containing compressed targets, mappings, and decision
      *    info
      */
     fun compress(
         variants: Map<String, AndroidLibraryData>,
         buildTypeFn: (String) -> String,
-        dependencyVariantCompressionResults: Map<Project, VariantCompressionResult>
+        dependencyVariantCompressionResults: Map<Project, VariantCompressionResult>,
+        checkDependencyBlocking: Boolean = true
     ): CompressionResultWithDecisions
 }
 
@@ -158,7 +94,8 @@ internal class DefaultVariantCompressor @Inject constructor(
     override fun compress(
         variants: Map<String, AndroidLibraryData>,
         buildTypeFn: (String) -> String,
-        dependencyVariantCompressionResults: Map<Project, VariantCompressionResult>
+        dependencyVariantCompressionResults: Map<Project, VariantCompressionResult>,
+        checkDependencyBlocking: Boolean
     ): CompressionResultWithDecisions {
         if (variants.isEmpty()) {
             return CompressionResultWithDecisions(
@@ -167,259 +104,73 @@ internal class DefaultVariantCompressor @Inject constructor(
             )
         }
 
-        // Group variants by build type
-        val variantsByBuildType = variants.entries.groupBy { (variantName, _) ->
-            buildTypeFn(variantName)
-        }
-
-        // Compress flavors within each build type (e.g., freeDebug + paidDebug → debug)
-        val flavorCompressed = compressFlavors(variantsByBuildType, dependencyVariantCompressionResults)
-
-        // Try to compress across build types (e.g., debug + release → single target)
-        return if (canFullyCompress(flavorCompressed, dependencyVariantCompressionResults)) {
-            applyFullCompression(flavorCompressed)
-        } else {
-            flavorCompressed.toResultWithDecisions()
-        }
-    }
-
-    // =========================================================================
-    // Flavor Compression (within each build type)
-    // =========================================================================
-
-    /**
-     * Processes each build type and aggregates results into a FlavorCompressionResult.
-     */
-    private fun compressFlavors(
-        variantsByBuildType: Map<String, List<Map.Entry<String, AndroidLibraryData>>>,
-        dependencyResults: Map<Project, VariantCompressionResult>
-    ): FlavorCompressionResult {
-        val results = variantsByBuildType.map { (buildType, variantGroup) ->
-            val variants = variantGroup.associate { it.key to it.value }
-            val decision = decideBuildTypeCompression(buildType, variants, dependencyResults)
-            applyBuildTypeDecision(decision)
-        }
-
-        return mergeResults(results)
-    }
-
-    /**
-     * Decides how to handle variants for a single build type.
-     *
-     * Evaluates whether variants can be compressed, must be expanded, or are singular.
-     */
-    private fun decideBuildTypeCompression(
-        buildType: String,
-        variants: Map<String, AndroidLibraryData>,
-        dependencyResults: Map<Project, VariantCompressionResult>
-    ): BuildTypeDecision {
-        // Single variant - nothing to compress
-        if (variants.size == 1) {
-            val (name, data) = variants.entries.first()
-            return BuildTypeDecision.Single(buildType, name, data)
-        }
-
-        // Check if compression is blocked by dependencies
-        val isBlocked = isCompressionBlocked(variants, buildType, dependencyResults)
-        if (isBlocked) {
-            val blockingDeps = findBlockingDependencies(variants, buildType, dependencyResults)
-            return BuildTypeDecision.Expand(
-                buildType = buildType,
-                reason = "blocked by dependencies: ${blockingDeps.joinToString(", ")}",
-                variants = variants
-            )
-        }
-
-        // Check if all variants are equivalent
-        val allEquivalent = areAllVariantsEquivalent(variants.values.toList())
-        if (!allEquivalent) {
-            return BuildTypeDecision.Expand(
-                buildType = buildType,
-                reason = "variants differ in configuration",
-                variants = variants
-            )
-        }
-
-        // All conditions met - compress
-        return BuildTypeDecision.Compress(
-            buildType = buildType,
-            suffix = normalizeVariantSuffix(buildType),
-            variants = variants
-        )
-    }
-
-    /**
-     * Applies a [BuildTypeDecision] to produce targets and mappings.
-     */
-    private fun applyBuildTypeDecision(decision: BuildTypeDecision): BuildTypeResult =
-        when (decision) {
-            is BuildTypeDecision.Compress -> applyCompression(decision)
-            is BuildTypeDecision.Expand -> applyExpansion(decision)
-            is BuildTypeDecision.Single -> applySingle(decision)
-        }
-
-    private fun applyCompression(decision: BuildTypeDecision.Compress): BuildTypeResult {
-        val sortedVariants = decision.variants.entries.sortedBy { it.key }
-        val representative = sortedVariants.first()
-
-        // Derive compressed name from representative
-        val representativeSuffix = normalizeVariantSuffix(representative.key)
-        val baseName = representative.value.name.removeSuffix(representativeSuffix)
-        val compressedData = representative.value.copy(name = baseName + decision.suffix)
-
-        // All variants map to the compressed suffix
-        val variantMappings = decision.variants.keys.associateWith { decision.suffix }
-
-        return BuildTypeResult(
-            targetsBySuffix = mapOf(decision.suffix to compressedData),
-            variantToSuffix = variantMappings,
-            isExpanded = false,
-            decision = VariantCompressionDecision.Compressed(
-                buildType = decision.buildType,
-                variants = decision.variants.keys.sorted(),
-                compressedSuffix = decision.suffix
-            )
-        )
-    }
-
-    private fun applyExpansion(decision: BuildTypeDecision.Expand): BuildTypeResult {
-        val targetsBySuffix = mutableMapOf<String, AndroidLibraryData>()
-        val variantToSuffix = mutableMapOf<String, String>()
-
-        decision.variants.forEach { (variantName, data) ->
-            val suffix = normalizeVariantSuffix(variantName)
-            targetsBySuffix[suffix] = data
-            variantToSuffix[variantName] = suffix
-        }
-
-        return BuildTypeResult(
-            targetsBySuffix = targetsBySuffix,
-            variantToSuffix = variantToSuffix,
-            isExpanded = true,
-            decision = VariantCompressionDecision.Expanded(
-                buildType = decision.buildType,
-                variants = decision.variants.keys.sorted(),
-                reason = decision.reason
-            )
-        )
-    }
-
-    private fun applySingle(decision: BuildTypeDecision.Single): BuildTypeResult {
-        val suffix = normalizeVariantSuffix(decision.variantName)
-
-        return BuildTypeResult(
-            targetsBySuffix = mapOf(suffix to decision.data),
-            variantToSuffix = mapOf(decision.variantName to suffix),
-            isExpanded = false,
-            decision = VariantCompressionDecision.SingleVariant(
-                buildType = decision.buildType,
-                variant = decision.variantName,
-                suffix = suffix
-            )
-        )
-    }
-
-    /**
-     * Merges multiple [BuildTypeResult]s into a single [FlavorCompressionResult].
-     */
-    private fun mergeResults(results: List<BuildTypeResult>): FlavorCompressionResult {
-        val targetsBySuffix = mutableMapOf<String, AndroidLibraryData>()
-        val variantToSuffix = mutableMapOf<String, String>()
-        val expandedBuildTypes = mutableSetOf<String>()
-        val decisions = mutableListOf<VariantCompressionDecision>()
-
-        for (result in results) {
-            targetsBySuffix.putAll(result.targetsBySuffix)
-            variantToSuffix.putAll(result.variantToSuffix)
-            decisions.add(result.decision)
-
-            if (result.isExpanded) {
-                val buildType = when (val d = result.decision) {
-                    is VariantCompressionDecision.Expanded -> d.buildType
-                    else -> continue
-                }
-                expandedBuildTypes.add(buildType)
+        // Create engine with library-specific adapters
+        val engine = VariantCompressionEngine<AndroidLibraryData, VariantCompressionResult>(
+            nameOf = { it.name },
+            copyWithName = { data, newName -> data.copy(name = newName) },
+            areAllEquivalent = { areAllVariantsEquivalent(it) },
+            buildTypeFn = buildTypeFn,
+            resultFactory = { targets, mapping, expanded ->
+                VariantCompressionResult(targets, mapping, expanded)
             }
+        )
+
+        // Configure Phase 2: cross-build-type compression with dependency checks
+        val crossBuildTypeConfig = VariantCompressionEngine.CrossBuildTypeConfig<AndroidLibraryData>(
+            enabled = true,
+            equivalenceCheck = { areAllVariantsEquivalent(it) },
+            dependencyCheck = {
+                // Check if all dependencies are fully compressed
+                val projectDeps = variants.values
+                    .flatMap { it.deps }
+                    .filterIsInstance<BazelDependency.ProjectDependency>()
+                    .map { it.dependencyProject }
+                    .toSet()
+
+                val blocked = projectDeps.any { dep ->
+                    dependencyVariantCompressionResults[dep]?.isFullyCompressed == false
+                }
+
+                if (blocked) {
+                    val blockingDeps = projectDeps.filter {
+                        dependencyVariantCompressionResults[it]?.isFullyCompressed == false
+                    }
+                    "blocked by non-fully-compressed dependencies: ${blockingDeps.joinToString(", ") { it.path }}"
+                } else null
+            }
+        )
+
+        // Run both Phase 1 and Phase 2 compression in engine
+        val result = if (checkDependencyBlocking) {
+            engine.compressWithBlocking(
+                variants = variants,
+                blockingReason = { buildType, vars ->
+                    if (isCompressionBlocked(vars, buildType, dependencyVariantCompressionResults)) {
+                        val deps = findBlockingDependencies(vars, buildType, dependencyVariantCompressionResults)
+                        "blocked by dependencies: ${deps.joinToString(", ")}"
+                    } else null
+                },
+                crossBuildType = crossBuildTypeConfig
+            )
+        } else {
+            engine.compressWithoutBlocking(variants, crossBuildType = crossBuildTypeConfig)
         }
 
-        return FlavorCompressionResult(
-            targetsBySuffix = targetsBySuffix,
-            variantToSuffix = variantToSuffix,
-            expandedBuildTypes = expandedBuildTypes,
-            decisions = decisions
-        )
-    }
-
-    // =========================================================================
-    // Build-Type Compression (across build types)
-    // =========================================================================
-
-    /**
-     * Checks if full cross-build-type compression is possible.
-     *
-     * Full compression requires:
-     * 1. Flavor compression succeeded (no expanded build types)
-     * 2. More than one build-type target to compress
-     * 3. All build-type targets are equivalent
-     * 4. All dependencies are fully compressed
-     */
-    private fun canFullyCompress(
-        flavorCompressed: FlavorCompressionResult,
-        dependencyResults: Map<Project, VariantCompressionResult>
-    ): Boolean {
-        // 1. Flavor compression must have succeeded (no expanded build types)
-        if (flavorCompressed.expandedBuildTypes.isNotEmpty()) return false
-
-        // 2. Must have more than one build-type target to compress
-        if (flavorCompressed.targetsBySuffix.size <= 1) return false
-
-        // 3. All build-type targets must be equivalent
-        val targets = flavorCompressed.targetsBySuffix.values.toList()
-        val first = targets.first()
-        val allEquivalent = targets.drop(1).all { equivalenceChecker.areEquivalent(first, it) }
-        if (!allEquivalent) return false
-
-        // 4. All dependencies must be fully compressed
-        val projectDeps = targets
-            .flatMap { it.deps }
-            .filterIsInstance<BazelDependency.ProjectDependency>()
-            .map { it.dependencyProject }
-            .toSet()
-
-        return projectDeps.all { dep ->
-            dependencyResults[dep]?.isFullyCompressed ?: true
+        // Build decision list if full compression occurred
+        val decisions = mutableListOf<VariantCompressionDecision>()
+        val finalResult = result.toResult()
+        if (finalResult.isFullyCompressed) {
+            decisions.add(
+                VariantCompressionDecision.FullyCompressed(
+                    buildTypes = variants.values.map { buildTypeFn(it.name) }.distinct(),
+                    variants = variants.keys.toList()
+                )
+            )
         }
-    }
-
-    /**
-     * Performs full cross-build-type compression.
-     *
-     * Creates a single target with no suffix by combining all build-type targets.
-     */
-    private fun applyFullCompression(flavorCompressed: FlavorCompressionResult): CompressionResultWithDecisions {
-        // Pick representative (first alphabetically by suffix)
-        val representativeSuffix = flavorCompressed.targetsBySuffix.keys.minOf { it }
-        val representativeData = flavorCompressed.targetsBySuffix.getValue(representativeSuffix)
-
-        // Update name to remove suffix
-        val baseName = representativeData.name.removeSuffix(representativeSuffix)
-        val fullyCompressedData = representativeData.copy(name = baseName)
-
-        // All variants map to empty suffix
-        val newVariantToSuffix = flavorCompressed.variantToSuffix.mapValues { "" }
-
-        val fullyCompressedDecision = VariantCompressionDecision.FullyCompressed(
-            buildTypes = flavorCompressed.targetsBySuffix.keys.map { it.removePrefix("-") },
-            variants = flavorCompressed.variantToSuffix.keys.toList()
-        )
 
         return CompressionResultWithDecisions(
-            result = VariantCompressionResult(
-                targetsBySuffix = mapOf("" to fullyCompressedData),
-                variantToSuffix = newVariantToSuffix,
-                expandedBuildTypes = emptySet()
-            ),
-            decisions = flavorCompressed.decisions + fullyCompressedDecision
+            result = finalResult,
+            decisions = decisions
         )
     }
 
